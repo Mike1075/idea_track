@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>溯源 · 观点血缘报告</title>
+<!-- 3D 思想图谱库（含 three.js）；离线/加载失败时自动退回 2D 血缘树 -->
+<script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js" defer></script>
+<style>
+  :root{
+    --bg:#0d0e14; --bg2:#15171f; --card:#1b1d28; --card2:#22242f;
+    --line:#2c2f3d; --ink:#eceef5; --ink2:#a6abbd; --ink3:#6f7488;
+    --warm:#f5a623; --warm2:#ff7a59;
+    --cool:#6c8cff; --teal:#3ec8c2; --violet:#b07bff; --green:#3fd07a; --magenta:#ff5d9e;
+    --amber:#f0a93b; --slate:#7d93b5;
+    --radius:16px; --shadow:0 10px 40px rgba(0,0,0,.45);
+    font-synthesis:none;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",Roboto,"Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.6;}
+  body{min-height:100vh;background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(108,140,255,.10), transparent 60%),
+    radial-gradient(900px 500px at 0% 0%, rgba(245,166,35,.07), transparent 55%),
+    var(--bg);}
+  .wrap{max-width:880px;margin:0 auto;padding:0 18px 96px;}
+  a{color:var(--cool);text-decoration:none}
+  button{font-family:inherit;cursor:pointer}
+  .muted{color:var(--ink3)}
+
+  header{position:sticky;top:0;z-index:30;backdrop-filter:blur(14px);
+    background:rgba(13,14,20,.72);border-bottom:1px solid var(--line);}
+  .hbar{max-width:880px;margin:0 auto;padding:11px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.5px;font-size:18px}
+  .logo .dot{width:11px;height:11px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--green),var(--teal));box-shadow:0 0 14px var(--teal)}
+  .logo small{font-weight:500;color:var(--ink3);font-size:12px;letter-spacing:0}
+  .hspace{flex:1}
+  .gear{background:var(--card2);border:1px solid var(--line);color:var(--ink2);
+    border-radius:10px;padding:7px 12px;font-size:13px;display:flex;align-items:center;gap:6px}
+  .gear:hover{color:var(--ink);border-color:var(--ink3)}
+  .key-ok{color:var(--green)} .key-no{color:var(--warm2)}
+
+  .settings{display:none;border-top:1px solid var(--line);background:var(--bg2)}
+  .settings.open{display:block}
+  .settings .inner{max-width:880px;margin:0 auto;padding:16px 18px;display:grid;gap:12px;
+    grid-template-columns:1fr 1fr;align-items:end}
+  .fld{display:flex;flex-direction:column;gap:5px}
+  .fld.full{grid-column:1/-1}
+  .fld label{font-size:12px;color:var(--ink2);font-weight:600}
+  .fld .hint{font-size:11px;color:var(--ink3);line-height:1.45}
+  select,input[type=text],input[type=password]{background:var(--card);border:1px solid var(--line);
+    color:var(--ink);border-radius:10px;padding:9px 11px;font-size:14px;width:100%;outline:none}
+  select:focus,input:focus{border-color:var(--cool)}
+  .row-btns{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap}
+  .btn{border:none;border-radius:11px;padding:10px 16px;font-size:14px;font-weight:600}
+  .btn-primary{background:linear-gradient(135deg,var(--cool),var(--violet));color:#fff}
+  .btn-ghost{background:var(--card2);border:1px solid var(--line);color:var(--ink2)}
+  .btn-ghost:hover{color:var(--ink)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .steps{display:flex;gap:6px;margin:22px 0 8px;font-size:12.5px}
+  .steps .st{flex:1;text-align:center;padding:8px 4px;border-radius:10px;color:var(--ink3);
+    background:var(--card);border:1px solid transparent;transition:.25s}
+  .steps .st .n{display:inline-flex;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center;
+    background:var(--card2);font-weight:700;margin-right:5px;font-size:11px}
+  .steps .st.active{color:var(--ink);border-color:var(--cool);background:var(--card2)}
+  .steps .st.active .n{background:var(--cool);color:#fff}
+  .steps .st.done{color:var(--teal)} .steps .st.done .n{background:var(--teal);color:#06231f}
+  .persona{font-size:12px;color:var(--ink3);margin:2px 2px 18px;text-align:right}
+  .persona b{color:var(--warm)}
+  .persona.mirror b{color:var(--teal)}
+
+  .panel{display:none;animation:fade .4s ease}
+  .panel.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+  h2.title{font-size:20px;margin-bottom:4px}
+  .sub{color:var(--ink2);font-size:13.5px;margin-bottom:16px}
+
+  .provoke{font-size:15px;color:var(--warm);font-weight:600;margin-bottom:10px;display:flex;gap:8px;align-items:flex-start}
+  .dice{background:none;border:1px solid var(--line);color:var(--ink3);border-radius:8px;padding:2px 8px;font-size:13px;flex-shrink:0}
+  textarea{width:100%;min-height:96px;background:var(--card2);border:1px solid var(--line);color:var(--ink);
+    border-radius:12px;padding:13px;font-size:15px;font-family:inherit;resize:vertical;outline:none}
+  textarea:focus{border-color:var(--warm)}
+  .send{margin-top:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn-warm{background:linear-gradient(135deg,var(--warm),var(--warm2));color:#241300}
+  .escape{font-size:12.5px;color:var(--ink3);text-decoration:underline;background:none;border:none;margin-left:auto}
+  .qa{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+  .bubble{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px}
+  .bubble.q{border-left:3px solid var(--warm)}
+  .bubble.me{border-left:3px solid var(--cool);color:var(--ink2)}
+  .opps{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .opp{background:rgba(245,166,35,.10);border:1px solid rgba(245,166,35,.4);color:var(--warm);
+    border-radius:20px;padding:5px 12px;font-size:12.5px}
+  .opp:hover{background:rgba(245,166,35,.2)}
+
+  .claim{display:grid;gap:10px}
+  .field{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .field .k{font-size:11.5px;color:var(--ink3);letter-spacing:1px;margin-bottom:3px}
+  .field .v{font-size:14.5px;color:var(--ink)}
+  .field.assert{border-color:rgba(245,166,35,.55);background:rgba(245,166,35,.06)}
+  .field.assert .v{font-size:16px;font-weight:600}
+  .field.weak .v::after{content:" · 论证不足";color:var(--warm2);font-size:12px}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:5px 11px;border-radius:20px;font-weight:600}
+  .badge.ok{background:rgba(63,208,122,.12);color:var(--green);border:1px solid rgba(63,208,122,.4)}
+  .badge.soft{background:rgba(245,166,35,.12);color:var(--warm);border:1px solid rgba(245,166,35,.4)}
+
+  .viewtabs{display:flex;gap:8px;margin-bottom:14px}
+  .vtab{background:var(--card2);border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:7px 14px;font-size:13px}
+  .vtab.active{color:var(--ink);border-color:var(--cool);background:rgba(108,140,255,.10)}
+  #graph3d{width:100%;height:440px;border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    background:radial-gradient(circle at 50% 40%,#161826,#0b0c12);position:relative}
+  #graph3d .ghint{position:absolute;left:12px;bottom:10px;font-size:11.5px;color:var(--ink3);pointer-events:none;z-index:2}
+  .tree{display:flex;flex-direction:column;gap:0}
+  .node{position:relative;padding:14px 16px;background:var(--card2);border:1px solid var(--line);border-radius:13px;margin-bottom:8px}
+  .node.dashed{border-style:dashed;opacity:.92}
+  .node.insuf{border-style:dashed;background:repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(255,255,255,.02) 8px,rgba(255,255,255,.02) 16px)}
+  .node .role{font-size:11.5px;color:var(--ink3);letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .node .who{font-size:15px;font-weight:600;margin:2px 0}
+  .node .said{font-size:13.5px;color:var(--ink2)}
+  .node .hedge{font-size:11.5px;color:var(--teal);margin-right:6px}
+  .node .hedge.low{color:var(--ink3)}
+  .node .yr{color:var(--ink3);font-weight:400;font-size:12px}
+  .dots{letter-spacing:1px;font-size:13px}
+  .dots .on{color:var(--teal)} .dots .off{color:var(--line)}
+  .dots.low .on{color:var(--slate)}
+  .relchip{display:inline-block;font-size:11px;color:var(--ink3);border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin-top:6px}
+  .why{margin-top:8px}
+  .why summary{font-size:12px;color:var(--ink3);cursor:pointer}
+  .why p{font-size:12.5px;color:var(--ink2);margin-top:6px}
+  .connector{height:16px;width:2px;background:var(--line);margin:-4px auto 4px}
+  .sources-head{font-size:13px;color:var(--ink2);margin:18px 0 8px;font-weight:600}
+  .camp{display:flex;justify-content:space-between;gap:10px;background:var(--card2);border:1px solid var(--line);
+    border-radius:11px;padding:10px 13px;margin-bottom:7px;font-size:13.5px}
+  .camp .cn{color:var(--ink)} .camp .ci{color:var(--ink3);font-size:12px}
+  .disclaimer{font-size:12px;color:var(--ink3);margin-top:14px;padding:10px 13px;border:1px dashed var(--line);border-radius:10px}
+  .rebut{font-size:12.5px;color:var(--ink3);margin-top:12px;text-align:center}
+
+  .rel5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:6px 0 16px}
+  .rel{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:13px 8px;text-align:center;color:var(--ink3)}
+  .rel .ic{font-size:18px} .rel .nm{font-size:12px;margin-top:5px;font-weight:600}
+  .rel.hit{border-color:var(--ink);color:var(--ink);box-shadow:0 0 0 1px var(--ink) inset}
+  .verdict-stmt{font-size:17px;font-weight:600;margin:4px 0 6px}
+  .verdict-reason{font-size:14px;color:var(--ink2)}
+  .sprout{margin-top:14px;padding:13px 15px;border-radius:13px;font-size:14px;
+    background:linear-gradient(135deg,rgba(63,208,122,.14),rgba(176,123,255,.12));border:1px solid rgba(63,208,122,.5)}
+  .sprout b{color:var(--green)}
+
+  .sizeswitch{display:flex;gap:8px;justify-content:center;margin:8px 0 16px}
+  #shareCard{margin:0 auto;width:340px;max-width:100%;border-radius:18px;overflow:hidden;
+    background:linear-gradient(160deg,#1a1d2b,#101119);border:1px solid var(--line);box-shadow:var(--shadow)}
+  #shareCard.square{width:360px}
+  .sc-brand{font-size:11px;letter-spacing:2px;color:var(--ink3);padding:14px 18px 0}
+  .sc-stamp{margin:14px 18px;border-radius:14px;padding:16px;text-align:center}
+  .sc-stamp .lab{font-size:25px;font-weight:800;letter-spacing:1px}
+  .sc-stamp .ph{font-size:14px;margin-top:4px;opacity:.92;color:var(--ink)}
+  .sc-claim{padding:0 18px;font-size:18px;font-weight:600;line-height:1.5}
+  .sc-claim .scope{display:block;font-size:12px;color:var(--ink3);font-weight:400;margin-top:6px}
+  .sc-line{padding:12px 18px 4px;font-size:12.5px;color:var(--ink2)}
+  .sc-multi{padding:2px 18px;font-size:12px;color:var(--ink3)}
+  .sc-foot{display:flex;justify-content:space-between;align-items:center;padding:14px 18px 16px;margin-top:8px;border-top:1px solid var(--line)}
+  .sc-foot .dis{font-size:10.5px;color:var(--ink3);max-width:72%}
+  .sc-foot .qr{width:46px;height:46px;border-radius:8px;background:var(--card2);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ink3);text-align:center;line-height:1.2}
+
+  .loading{display:none;align-items:center;gap:12px;color:var(--ink2);font-size:14px;margin-top:16px}
+  .loading.show{display:flex}
+  .spin{width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--cool);border-radius:50%;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .err{display:none;margin-top:14px;background:rgba(255,93,158,.10);border:1px solid rgba(255,93,158,.4);
+    color:#ffb3d1;border-radius:12px;padding:12px 14px;font-size:13.5px;white-space:pre-wrap}
+  .err.show{display:block}
+  .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:var(--card2);border:1px solid var(--line);color:var(--ink);padding:11px 18px;border-radius:12px;
+    font-size:13.5px;transition:.3s;z-index:50;pointer-events:none;max-width:90%}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+  .actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+
+  @media(max-width:560px){
+    .settings .inner{grid-template-columns:1fr}
+    .rel{padding:9px 2px} .rel .nm{font-size:10px} .rel .ic{font-size:15px}
+    #graph3d{height:340px}
+    .steps{font-size:11px} .steps .st .n{margin-right:2px}
+    h2.title{font-size:18px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="hbar">
+    <div class="logo"><span class="dot"></span>溯源<small>观点血缘报告</small></div>
+    <div class="hspace"></div>
+    <button class="gear" id="gearBtn">⚙︎ <span id="keyState" class="key-no">未设置 Key</span></button>
+  </div>
+  <div class="settings" id="settings">
+    <div class="inner">
+      <div class="fld">
+        <label>模型服务商 (Provider)</label>
+        <select id="provider">
+          <option value="openai" selected>OpenAI（GPT，推荐）</option>
+          <option value="anthropic">Anthropic（Claude）</option>
+          <option value="minimax">MiniMax（实验性）</option>
+        </select>
+        <span class="hint" id="provHint"></span>
+      </div>
+      <div class="fld">
+        <label>模型 (Model)</label>
+        <input type="text" id="model" placeholder="gpt-4o" />
+        <span class="hint" id="modelHint">可改成你的 Key 支持的型号</span>
+      </div>
+      <div class="fld full">
+        <label>API Key（仅存在你本机浏览器 localStorage，不上传任何第三方）</label>
+        <input type="password" id="apiKey" placeholder="粘贴你的 API Key…" autocomplete="off" />
+      </div>
+      <div class="row-btns">
+        <button class="btn btn-primary" id="saveKey">保存</button>
+        <button class="btn btn-ghost" id="clearKey">清除 Key</button>
+        <span class="hint" style="align-self:center">浏览器直连会暴露 Key 于前端；正式上线建议走后端代理。</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="steps">
+    <div class="st active" data-s="1"><span class="n">1</span>逼问</div>
+    <div class="st" data-s="2"><span class="n">2</span>主张</div>
+    <div class="st" data-s="3"><span class="n">3</span>溯源</div>
+    <div class="st" data-s="4"><span class="n">4</span>判定</div>
+  </div>
+  <div class="persona" id="persona">人格 · <b>抬杠的同谋</b>：和你一边，但不让你蒙混</div>
+
+  <section class="panel show" id="p1">
+    <div class="card">
+      <h2 class="title">先说一个你信的看法</h2>
+      <div class="sub">别给空白框。说一句你真信、但可能有人会拍桌子的话。</div>
+      <div class="provoke"><span id="provokeTxt"></span><button class="dice" id="dice">🎲换一个</button></div>
+      <textarea id="input" placeholder="把你的看法砸进来…"></textarea>
+      <div class="send">
+        <button class="btn btn-warm" id="go">扔给我 →</button>
+        <button class="escape" id="escape">我说不清，帮我猜</button>
+      </div>
+      <div class="qa" id="qa"></div>
+      <div class="loading" id="l1"><span class="spin"></span><span>在逼问你…</span></div>
+      <div class="err" id="e1"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p2">
+    <div class="card">
+      <h2 class="title">这就是你要溯源的主张</h2>
+      <div class="sub">把模糊感受拆成四块。<span class="muted">断言最重——它决定后面能不能长出新枝芽。</span></div>
+      <div class="claim" id="claim"></div>
+      <div style="margin-top:12px" id="fcheck"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="toTrace">去查它从哪来 →</button>
+        <button class="btn btn-ghost" id="backTo1">重说</button>
+      </div>
+      <div class="loading" id="l2"><span class="spin"></span><span>在凝练主张…</span></div>
+      <div class="err" id="e2"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p3">
+    <div class="card">
+      <h2 class="title">这个想法的来历</h2>
+      <div class="sub">以下是<b>血缘假设</b>，不是定论。越往下越古老。</div>
+      <div class="viewtabs">
+        <button class="vtab active" id="tab3d">🌐 3D 思想图谱</button>
+        <button class="vtab" id="tab2d">🌳 血缘树</button>
+      </div>
+      <div id="graph3d"><div class="ghint">拖拽旋转 · 滚轮/双指缩放 · 点击节点聚焦</div></div>
+      <div id="treeWrap" style="display:none"><div class="tree" id="tree"></div></div>
+      <div class="sources-head">众源 · 这个想法被哪些阵营独立想到过（撞车 ≠ 抄袭）</div>
+      <div id="sources"></div>
+      <div class="disclaimer" id="disc">血缘为假设非定论，置信度仅供参考。</div>
+      <div class="rebut">这条血缘照歪了？继续到判定，仍可推翻。</div>
+      <div class="actions">
+        <button class="btn btn-primary" id="toVerdict">看判定 →</button>
+        <button class="btn btn-ghost" id="backTo2">回主张</button>
+      </div>
+      <div class="loading" id="l3"><span class="spin"></span><span>在为这个想法找来历…（这是假设，不是定论）</span></div>
+      <div class="err" id="e3"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p4">
+    <div class="card">
+      <h2 class="title">它和已有的想法是什么关系</h2>
+      <div class="sub">五选一关系分类，<b>判关系，不判人</b>。</div>
+      <div class="rel5" id="rel5"></div>
+      <div class="verdict-stmt" id="vstmt"></div>
+      <div class="verdict-reason" id="vreason"></div>
+      <div id="sproutBox"></div>
+      <div class="rebut" id="rebut"></div>
+
+      <h2 class="title" style="margin-top:26px">可分享结果卡</h2>
+      <div class="sizeswitch">
+        <button class="vtab active" id="sz34">竖版 3:4</button>
+        <button class="vtab" id="sz11">方版 1:1</button>
+      </div>
+      <div id="shareCard"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="copyCard">复制卡片文案</button>
+        <button class="btn btn-ghost" id="restart">再溯一个</button>
+      </div>
+      <div class="loading" id="l4"><span class="spin"></span><span>在判定关系…</span></div>
+      <div class="err" id="e4"></div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ===== 四段提示词链（workflow 验证版，原样内嵌，未改写语义） ===== */
+const PROMPTS = {
+elicit:`你是「溯源」产品第一步「逼问」的引擎，人格是【抬杠的同谋】：和用户站一边，但绝不让他蒙混过关。第二人称、短句、敢戳，但不羞辱。你的唯一目标：在最多 2 轮苏格拉底追问内，把用户给的「模糊感受 / 半句话 / 情绪化原话」逼成一个**清晰、可证伪**的主张。
+
+## 可证伪标准（两个硬条件，缺一不可）
+1. 有对立面（断言）：存在会拍桌子反对的人，不是「谁都同意」的废话。
+2. 有边界（适用范围）：用户自己也承认在某条件下它不成立，不是放之四海的鸡汤。
+
+## 追问策略（苏格拉底式，按缺什么问什么，一次只问一件事）
+- 若输入只是感受/吐槽 → 问「指向」：把感受逼成命题。话术变体如「这是你的感受，不是你的观点。你真正主张的是什么？说成一句**有人点头、有人拍桌**的话。」
+- 若已有粗主张但谁都会同意 → 问「树敌」：「如果这句话谁都同意，它等于没说。谁会反对你？他们怎么反驳？」并在 opponents 字段给 2 个具体反方代言人。
+- 若有断言但没边界 → 问「划界」：「什么情况下**你自己也承认这话不成立**？给它划条边，否则它是鸡汤。」
+- 反作弊：若用户新答案只是换了说法 / 同义复述 / 太短，needs_followup 仍为 true，question 用回怼变体：「这还是换了个说法。再逼自己一句。」
+
+## 红线
+- 绝不替用户编造他没表达过的立场；逃生阀场景（用户说「我说不清，帮我猜」）才允许在 guessed_claims 给候选，平时为空数组。
+- 最多 2 轮。第 2 轮后即使仍偏软，也凝练出当前最好版本并放行（needs_followup=false），同时用 still_soft 标注它软在哪。
+
+## 输入
+你会收到：original_input（用户原话）、round（当前轮次，从 1 开始）、history（之前的问答数组，可空）、escape_hatch（布尔，用户是否点了「帮我猜」）。
+
+## 输出：严格 JSON，不要任何额外文字、不要 markdown 代码块
+{
+  "needs_followup": true,
+  "round": 1,
+  "diagnosis": "missing_proposition | no_opponent | no_boundary | just_rephrase | ok",
+  "question": "本轮要问的唯一一个追问问题（needs_followup=true 时必填，否则空串）。第二人称、短句、抬杠同谋语气",
+  "opponents": ["仅 no_opponent 阶段给 2 个具体反方代言人气泡文案，否则空数组"],
+  "refined_claim": "已凝练好的可证伪主张（needs_followup=false 时必填，否则空串）",
+  "still_soft": "放行但仍偏软时说明软在哪，否则空串",
+  "guessed_claims": ["仅 escape_hatch=true 时给 2-3 个候选主张供用户选，否则空数组"]
+}
+
+只输出这个 JSON 对象。`,
+
+structure:`你是「溯源」产品的结构化引擎，人格是【谦卑的镜子】：主语是「这个想法」，不评价人。你的任务：把一句已凝练的可证伪主张，抽成结构化 claim 的**四字段**。
+
+## 四字段定义（严格按此，不要自创字段）
+- 主张（proposition）：核心一句话，可转述、能上分享卡，不拔高不注水。
+- 断言（assertion）：这个主张顶撞的对立面——它在反对什么、和谁过不去。必须有明确对立面。
+- 论证（argument）：支撑主张的理由/机制/逻辑链；若原文没有充分论证，据实在 argument_completeness 标注。
+- 适用范围（scope）：在什么条件下成立、什么条件下用户自己也承认不成立。诚实的边界。
+
+## 抽取纪律
+- 只抽取用户实际表达或强烈隐含的内容，不替用户补充他没说过的立场或证据。
+- 论证若原文确实没有，给出可合理推断的最小论证，并把 argument_completeness 设为 "weak" 或 "missing"，绝不编造数据/出处/引用。
+
+## 输入
+refined_claim、history（可空）、original_input（可空）。
+
+## 输出：严格 JSON，不要任何额外文字、不要 markdown 代码块
+{
+  "proposition": "主张，一句话核心，可转述",
+  "assertion": "断言，它顶撞的对立面 / 在反对谁",
+  "argument": "论证，支撑的理由或机制",
+  "argument_completeness": "strong | weak | missing",
+  "scope": "适用范围，成立与不成立的边界条件",
+  "falsifiable_check": { "has_opponent": true, "has_boundary": true, "verdict": "可证伪 | 还很软" }
+}
+
+只输出这个 JSON 对象。`,
+
+trace:`你是「溯源」产品第二步「溯源」的引擎，人格是【谦卑的镜子】：主语永远是「这个想法」。任务：为一个结构化主张生成**多层血缘假设链（纵向）+ 多个不同出处/阵营（众源，横向）**，每条都带置信度。
+
+## 第一红线（最重要）：绝不编造引用
+- 你给的是「血缘**假设**」，不是定论，不是引用。
+- 必须使用假设语气词，只能从这些里选：可能来自 / 线索指向 / 一种血缘假设 / 推测经由 / 这一脉或可追溯到。
+- 严禁断言式措辞：出自 / 引自 / 你抄了 / 这其实是 / 作者就是。
+- 不确定就标**低置信度**；完全没把握的层级，输出 level="insufficient" 留白节点（confidence=0，content 写「线索不足，仅存疑」），宁可留白也不编造人名/书名/年份。
+
+## confidence 圆点制（0-5，整数）
+5 极强（几乎公认的思想源流）；3-4 中等（明显概念重合或传播路径线索）；1-2 弱（仅松散关联）；0 纯猜测 → 必须改用 insufficient 留白节点。
+
+## 纵向血缘链（lineage）
+从「你的说法」向下，越下越古老：popularizer（谁让它流行）/ framework（源头框架/学派）/ tradition（更古老传统/经典）。每节点给 relation_hint（与上一层关系：复述/应用/精化/综合/反驳）和 reasoning（为什么这么假设的可质疑依据）。低置信节点 dashed=true。
+
+## 横向众源（multi_source）
+同一想法常被多人独立想到——撞车 ≠ 抄袭。列 2-3 个不同传统/阵营对类似想法的叫法。
+
+## 输入：structured_claim { proposition, assertion, argument, scope }
+
+## 输出：严格 JSON，不要任何额外文字、不要 markdown 代码块
+{
+  "your_statement": "你的说法浓缩一句",
+  "lineage": [
+    { "level": "popularizer | framework | tradition | insufficient", "role": "角色描述", "content": "名字/出处浓缩；insufficient 写『线索不足，仅存疑』", "year": "年份或时期，无把握留空串", "hedge": "可能来自 | 线索指向 | 一种血缘假设 | 推测经由 | 这一脉或可追溯到", "confidence": 3, "dashed": false, "relation_hint": "复述 | 应用 | 精化 | 综合 | 反驳 | 未知", "said": "这一层具体说了什么", "reasoning": "为什么这么假设的可质疑依据" }
+  ],
+  "multi_source": [
+    { "camp": "传统/阵营名", "their_name_for_it": "这个想法在该阵营里叫什么", "hedge": "可能来自 | 线索指向 | 一种血缘假设 | 推测经由", "confidence": 2 }
+  ],
+  "disclaimer": "血缘为假设非定论，置信度仅供参考"
+}
+
+规则复核：lineage 至少 1 个节点；任何 confidence=0 的节点 level 必须是 insufficient；绝不出现「出自/引自」。只输出这个 JSON 对象。`,
+
+verdict:`你是「溯源」产品第三步「判定」的引擎，人格是【谦卑的镜子】：判语主语是「这一笔」/「这个想法」，**判关系不判人**。任务：基于结构化主张 + 血缘溯源结果，做**五选一关系分类**，命中且仅命中一类。
+
+## 判定框架（五类，五选一）
+1 复述/换皮 — 同一意思换个说法（不是新枝芽）
+2 应用/举例 — 旧框架里加新例子（不是新枝芽）
+3 精化 — 给旧观点加条件/边界/精度（仅很强的精化算新枝芽）
+4 综合 — 把两个原本没连起来的已有节点连上（是新枝芽）
+5 新分支/反驳 — 旧体系里没有的，或直接顶撞旧节点（是新枝芽）
+
+## 核心纪律
+- 这是关系分类，不是认知等级量表打分；五类地位平等，无升级感、无高低、无好坏。
+- 判语陈述关系、不评价人：复述「这一笔主要是把已有说法换了个讲法」；应用「这一笔在旧框架里加了一个新例子」；精化「这一笔给旧观点补了一个边界条件」；综合「这一笔把两个原本没连上的想法接起来了」；新分支「这一笔顶撞了某个旧节点 / 长在了旧体系之外」。禁用「你只是在复述/你没有原创/小修小补」。
+- 「新枝芽 🌱」是稀缺奖励：仅 4、5 及很强的 3 触发 sprouted=true，且 sprout_reason 必须说明新在哪。不滥发。
+- score 是内部强度参考（0-100），不对外展示。
+
+## 判定逻辑要点
+- assertion 是否真的顶撞了 lineage 里某旧节点 → 倾向 5。
+- 主张是否把 multi_source/lineage 里两个原本不相连的节点接起来 → 倾向 4。
+- 是否只给旧观点加边界/条件/精度 → 3；是否只是换说法 → 1；只是旧框架加新例 → 2。
+
+## 输入：structured_claim（{proposition,assertion,argument,scope}）、trace_result（第二步血缘+众源 JSON）
+
+## 输出：严格 JSON，不要任何额外文字、不要 markdown 代码块
+{
+  "category_id": 5,
+  "category_name": "复述/换皮 | 应用/举例 | 精化 | 综合 | 新分支/反驳",
+  "verdict_statement": "陈述关系不评价人的判语，主语是『这一笔』/『这个想法』",
+  "reason": "为什么命中这一类的依据",
+  "score": 0,
+  "sprouted": false,
+  "sprout_reason": "sprouted=true 时必填，说明新在哪；否则空串",
+  "stamp_phrase": "分享卡用的人话印章判语，如『长出了一根新枝芽』『换了身衣服的老观点』，用植物/换衣隐喻，不羞辱",
+  "rebuttal_prompt": "不同意这个判定？告诉我哪里不对"
+}
+
+规则复核：category_id 必须 1-5 之一且只命中一类；sprouted 仅当 category_id ∈ {4,5} 或很强的精化时为 true。只输出这个 JSON 对象。`
+};
+
+/* ===== Provider 适配层：OpenAI（默认）/ Anthropic / MiniMax ===== */
+const PROVIDERS = {
+  openai:{
+    label:"OpenAI", defaultModel:"gpt-4o",
+    hint:"端点 api.openai.com/v1/chat/completions，Key 以 sk- 开头。",
+    modelHint:"如 gpt-4o · gpt-4.1 · gpt-4o-mini",
+    async call(key,model,system,user){
+      const url="https://api.openai.com/v1/chat/completions";
+      const headers={"content-type":"application/json","Authorization":"Bearer "+key};
+      const base={model,messages:[{role:"system",content:system},{role:"user",content:user}]};
+      // 新模型（推理系/gpt-5 等）用 max_completion_tokens 且不接受自定 temperature；
+      // 老模型只认 max_tokens。先按新规格发，失败再回退。
+      let r=await fetch(url,{method:"POST",headers,body:JSON.stringify(Object.assign({max_completion_tokens:4000},base))});
+      if(!r.ok){
+        const t=await r.text();
+        if(/max_tokens|max_completion_tokens/i.test(t)){
+          r=await fetch(url,{method:"POST",headers,body:JSON.stringify(Object.assign({max_tokens:2200,temperature:0.2},base))});
+          if(!r.ok) throw new Error("OpenAI "+r.status+"："+(await r.text()).slice(0,300));
+        } else throw new Error("OpenAI "+r.status+"："+t.slice(0,300));
+      }
+      const d=await r.json();
+      const c=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+      if(!c) throw new Error("OpenAI 返回空内容（可能 max_completion_tokens 被推理过程吃光，换 gpt-4o 或调大）。");
+      return c;
+    }
+  },
+  anthropic:{
+    label:"Anthropic", defaultModel:"claude-sonnet-4-6",
+    hint:"端点 api.anthropic.com/v1/messages，浏览器直连已带 dangerous-direct-browser-access。",
+    modelHint:"如 claude-sonnet-4-6 · claude-opus-4-8（更准更贵）",
+    async call(key,model,system,user){
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+        headers:{"content-type":"application/json","x-api-key":key,
+          "anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model,max_tokens:2200,system,messages:[{role:"user",content:user}]})});
+      if(!r.ok) throw new Error("Anthropic "+r.status+"："+(await r.text()).slice(0,300));
+      const d=await r.json(); return d.content[0].text;
+    }
+  },
+  minimax:{
+    label:"MiniMax", defaultModel:"MiniMax-Text-01",
+    hint:"端点 api.minimax.chat/v1/text/chatcompletion_v2（实验性，按你的型号填）。",
+    modelHint:"如 MiniMax-Text-01 · abab6.5s-chat",
+    async call(key,model,system,user){
+      const r=await fetch("https://api.minimax.chat/v1/text/chatcompletion_v2",{method:"POST",
+        headers:{"content-type":"application/json","Authorization":"Bearer "+key},
+        body:JSON.stringify({model,messages:[{role:"system",content:system},{role:"user",content:user}]})});
+      if(!r.ok) throw new Error("MiniMax "+r.status+"："+(await r.text()).slice(0,300));
+      const d=await r.json();
+      return (d.choices&&d.choices[0]&&(d.choices[0].message?d.choices[0].message.content:d.choices[0].text))||d.reply||"";
+    }
+  }
+};
+
+function extractJSON(txt){
+  if(!txt) throw new Error("模型返回为空");
+  let s=String(txt).trim().replace(/^```(json)?/i,"").replace(/```$/,"").trim();
+  const a=s.indexOf("{"), b=s.lastIndexOf("}");
+  if(a>=0&&b>a) s=s.slice(a,b+1);
+  try{ return JSON.parse(s); }
+  catch(e){ throw new Error("解析模型 JSON 失败。原文片段：\n"+String(txt).slice(0,200)); }
+}
+
+/* ===== 状态 + 配置 ===== */
+const CFG_KEY="suyuan_cfg_v1";
+let cfg={provider:"openai",model:"gpt-4o",keys:{}};
+function loadCfg(){ try{const c=JSON.parse(localStorage.getItem(CFG_KEY));if(c)cfg=Object.assign(cfg,c);}catch(e){} }
+function saveCfg(){ try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg));}catch(e){} }
+function curKey(){ return cfg.keys[cfg.provider]||""; }
+const state={original:"",history:[],round:0,claim:null,trace:null,verdict:null,escape:false};
+
+async function ask(system,inputObj){
+  const p=PROVIDERS[cfg.provider], key=curKey();
+  if(!key) throw new Error("还没设置 "+p.label+" 的 API Key —— 点右上角 ⚙︎ 填一下。");
+  const raw=await p.call(key,cfg.model||p.defaultModel,system,JSON.stringify(inputObj,null,2));
+  return extractJSON(raw);
+}
+
+/* ===== DOM helpers ===== */
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+function show(id){$$(".panel").forEach(p=>p.classList.remove("show"));$("#p"+id).classList.add("show");
+  $$(".steps .st").forEach(st=>{const n=+st.dataset.s;st.classList.toggle("active",n===id);st.classList.toggle("done",n<id);});
+  const m=id>=2;$("#persona").classList.toggle("mirror",m);
+  $("#persona").innerHTML=m?'人格 · <b>谦卑的镜子</b>：照来历，不照你':'人格 · <b>抬杠的同谋</b>：和你一边，但不让你蒙混';
+  window.scrollTo({top:0,behavior:"smooth"});}
+function load(id,on,txt){const l=$("#l"+id);l.classList.toggle("show",on);if(txt)l.querySelector("span:last-child").textContent=txt;}
+function err(id,msg){const e=$("#e"+id);if(msg){e.textContent="⚠ "+msg;e.classList.add("show");}else e.classList.remove("show");}
+let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2200);}
+function dots(c,low){c=Math.max(0,Math.min(5,c|0));let s='<span class="dots'+(low?' low':'')+'">';for(let i=0;i<5;i++)s+=i<c?'<span class="on">●</span>':'<span class="off">○</span>';return s+'</span>';}
+function esc(s){return (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+/* ===== 设置面板 ===== */
+function syncSettings(){
+  const p=PROVIDERS[cfg.provider];
+  $("#provider").value=cfg.provider;$("#model").value=cfg.model||p.defaultModel;$("#model").placeholder=p.defaultModel;
+  $("#apiKey").value=curKey();$("#provHint").textContent=p.hint;$("#modelHint").textContent=p.modelHint;
+  const ok=!!curKey();$("#keyState").textContent=ok?(p.label+" 已就绪"):("未设置 "+p.label+" Key");
+  $("#keyState").className=ok?"key-ok":"key-no";}
+$("#gearBtn").onclick=()=>$("#settings").classList.toggle("open");
+$("#provider").onchange=e=>{cfg.provider=e.target.value;cfg.model=PROVIDERS[cfg.provider].defaultModel;saveCfg();syncSettings();};
+$("#saveKey").onclick=()=>{cfg.model=$("#model").value.trim()||PROVIDERS[cfg.provider].defaultModel;
+  cfg.keys[cfg.provider]=$("#apiKey").value.trim();saveCfg();syncSettings();toast("已保存到本机浏览器");$("#settings").classList.remove("open");};
+$("#clearKey").onclick=()=>{delete cfg.keys[cfg.provider];$("#apiKey").value="";saveCfg();syncSettings();toast("已清除当前服务商的 Key");};
+
+/* ===== STEP 1 · 逼问 ===== */
+const PROVOKES=[
+  "说一个你最近反复跟人安利、但对方好像没 get 到的看法。",
+  "有没有哪句话你信，但说不清为什么信？写出来，我帮你拆穿它。",
+  "写一个你觉得『大家都错了，只有我看明白』的事。",
+  "说一句你坚信、但知道会有人翻白眼的观点。"];
+let pIdx=0;
+function rollProvoke(){pIdx=(pIdx+1)%PROVOKES.length;$("#provokeTxt").textContent=PROVOKES[pIdx];}
+$("#dice").onclick=rollProvoke;
+function pushQA(html){const d=document.createElement("div");d.innerHTML=html;while(d.firstElementChild)$("#qa").appendChild(d.firstElementChild);}
+
+async function runElicit(text,escape){
+  state.round++;load(1,true,state.round>1?"还没完，继续逼…":"在逼问你…");err(1);
+  try{
+    const out=await ask(PROMPTS.elicit,{original_input:state.original,round:state.round,history:state.history,escape_hatch:!!escape});
+    if(escape && out.guessed_claims && out.guessed_claims.length){
+      load(1,false);
+      let h='<div class="bubble q">我猜你想说的是这几个，挑一个：</div><div class="opps">';
+      out.guessed_claims.forEach((g,i)=>h+='<button class="opp" data-g="'+i+'">'+esc(g)+'</button>');
+      h+='</div>';pushQA(h);
+      $$("#qa .opp[data-g]").forEach(b=>b.onclick=()=>{state.original=out.guessed_claims[+b.dataset.g];proceedStructure(state.original);});
+      return;
+    }
+    if(out.needs_followup && state.round<2){
+      load(1,false);
+      pushQA('<div class="bubble q">'+esc(out.question)+'</div>');
+      if(out.opponents&&out.opponents.length){
+        let h='<div class="opps">';out.opponents.forEach(o=>h+='<button class="opp">对，就是反对：'+esc(o)+'</button>');h+='</div>';pushQA(h);
+        $$("#qa .opp").forEach(b=>{if(b.dataset.g===undefined)b.onclick=()=>{$("#input").value="我反对的是："+b.textContent.replace("对，就是反对：","");$("#input").focus();};});
+      }
+      state.history.push({role:"assistant",question:out.question});
+      $("#input").value="";$("#input").placeholder="接着答这一问…";$("#input").focus();$("#go").textContent="再扔给我 →";
+      return;
+    }
+    const refined=out.refined_claim||state.original;
+    if(out.still_soft) toast("放行了，但它仍有点软："+out.still_soft);
+    proceedStructure(refined,out.still_soft);
+  }catch(e){load(1,false);err(1,e.message);}
+}
+$("#go").onclick=()=>{const v=$("#input").value.trim();if(!v){toast("先写点东西");return;}
+  if(state.round===0)state.original=v;state.history.push({role:"user",text:v});
+  pushQA('<div class="bubble me">'+esc(v)+'</div>');runElicit(v,false);};
+$("#escape").onclick=()=>{const v=$("#input").value.trim()||state.original||"（没头绪）";if(!state.original)state.original=v;state.escape=true;runElicit(v,true);};
+$("#backTo1").onclick=()=>show(1);
+
+/* ===== STEP 2 · 结构化主张 ===== */
+async function proceedStructure(refined,soft){
+  show(2);load(2,true);err(2);
+  try{
+    const c=await ask(PROMPTS.structure,{refined_claim:refined,history:state.history,original_input:state.original});
+    state.claim=c;const fc=c.argument_completeness;
+    $("#claim").innerHTML=field("主张",c.proposition)+field("断言",c.assertion,"assert")+
+      field("论证",c.argument,(fc==="weak"||fc==="missing")?"weak":"")+field("适用范围",c.scope);
+    const chk=c.falsifiable_check||{},ok=chk.verdict==="可证伪";
+    $("#fcheck").innerHTML='<span class="badge '+(ok?"ok":"soft")+'">'+(ok?"✓ 可证伪":"⚠ 还很软")+'</span>'+
+      (soft?'<span class="muted" style="margin-left:8px;font-size:12.5px">'+esc(soft)+'</span>':'');
+    load(2,false);
+  }catch(e){load(2,false);err(2,e.message);}
+}
+function field(k,v,cls){return '<div class="field '+(cls||"")+'"><div class="k">'+k+'</div><div class="v">'+esc(v)+'</div></div>';}
+$("#backTo2").onclick=()=>show(2);
+
+/* ===== STEP 3 · 溯源 ===== */
+const LEVEL_COLOR={popularizer:"#6c8cff",framework:"#b07bff",tradition:"#3ec8c2",insufficient:"#5b5f72"};
+function nodeColor(lv,c){const base=LEVEL_COLOR[lv]||"#8aa0d8";return c<=2?"#5b6076":base;}
+function hedgeLow(c){return c<=2;}
+$("#toTrace").onclick=runTrace;
+async function runTrace(){
+  show(3);load(3,true);err(3);
+  try{
+    const t=await ask(PROMPTS.trace,{proposition:state.claim.proposition,assertion:state.claim.assertion,argument:state.claim.argument,scope:state.claim.scope});
+    state.trace=t;renderTree(t);renderSources(t);
+    $("#disc").textContent=t.disclaimer||"血缘为假设非定论，置信度仅供参考。";
+    load(3,false);setTimeout(()=>renderGraph(t),60);
+  }catch(e){load(3,false);err(3,e.message);}
+}
+function renderTree(t){
+  let h='<div class="node" style="border-color:var(--warm)"><div class="role"><span>你的说法</span></div>'+
+    '<div class="who" style="color:var(--warm)">'+esc(t.your_statement)+'</div></div>';
+  (t.lineage||[]).forEach((n,i)=>{
+    h+='<div class="connector"></div>';
+    const ins=n.level==="insufficient"||n.confidence===0,low=hedgeLow(n.confidence);
+    h+='<div class="node'+(n.dashed?" dashed":"")+(ins?" insuf":"")+'">'+
+      '<div class="role"><span>'+esc(n.role||n.level||"")+(n.year?' <span class="yr">· '+esc(n.year)+'</span>':'')+'</span>'+
+        (ins?'<span class="muted">线索不足</span>':dots(n.confidence,low))+'</div>'+
+      '<div class="who"><span class="hedge'+(low?" low":"")+'">'+esc(n.hedge||"")+'</span>'+esc(n.content)+'</div>'+
+      (n.said?'<div class="said">'+esc(n.said)+'</div>':'')+
+      (n.relation_hint&&n.relation_hint!=="未知"?'<span class="relchip">关系：'+esc(n.relation_hint)+'</span>':'')+
+      (n.reasoning?'<details class="why"><summary>为什么这么假设？</summary><p>'+esc(n.reasoning)+'</p></details>':'')+'</div>';
+  });
+  $("#tree").innerHTML=h;
+}
+function renderSources(t){
+  const ms=t.multi_source||[];
+  $("#sources").innerHTML=ms.length?ms.map(m=>
+    '<div class="camp"><div><div class="cn">'+esc(m.camp)+'</div><div class="ci">在这儿叫：'+esc(m.their_name_for_it)+'</div></div>'+
+    '<div style="text-align:right">'+dots(m.confidence,hedgeLow(m.confidence))+'<div class="ci">'+esc(m.hedge||"")+'</div></div></div>'
+  ).join(""):'<div class="muted" style="font-size:13px">未找到明显的并列阵营。</div>';
+}
+let Graph=null;
+function buildGraphData(t){
+  const nodes=[{id:"__you",name:"你："+t.your_statement,color:"#f5a623",val:13}];
+  const links=[];let prev="__you";
+  (t.lineage||[]).forEach((n,i)=>{
+    const id="L"+i,ins=n.level==="insufficient"||n.confidence===0;
+    nodes.push({id,name:(n.role?n.role+"·":"")+n.content+(n.year?"("+n.year+")":""),
+      color:nodeColor(n.level,n.confidence),val:5+(n.confidence||0)*1.4,detail:n.said||""});
+    links.push({source:prev,target:id,rel:n.relation_hint||"",dashed:ins||n.dashed});prev=id;
+  });
+  (t.multi_source||[]).forEach((m,i)=>{nodes.push({id:"M"+i,name:m.camp+"："+m.their_name_for_it,color:"#3fd07a",val:5});
+    links.push({source:"__you",target:"M"+i,rel:"众源",dashed:true});});
+  return {nodes,links};
+}
+function renderGraph(t){
+  const el=$("#graph3d");
+  if(typeof ForceGraph3D==="undefined"){switchView("2d");$("#tab3d").style.opacity=.45;$("#tab3d").title="3D 库未加载（需联网），已退回血缘树";toast("3D 图谱库未加载，已退回血缘树");return;}
+  const data=buildGraphData(t);
+  el.innerHTML='<div class="ghint">拖拽旋转 · 滚轮/双指缩放 · 点击节点聚焦</div>';
+  Graph=ForceGraph3D()(el)
+    .backgroundColor("rgba(0,0,0,0)")
+    .width(el.clientWidth).height(el.clientHeight)
+    .graphData(data)
+    .nodeLabel(n=>'<div style="background:#1b1d28;border:1px solid #2c2f3d;color:#eceef5;padding:6px 9px;border-radius:8px;font-size:12px;max-width:240px">'+esc(n.name)+(n.detail?'<br><span style="color:#a6abbd">'+esc(n.detail)+'</span>':'')+'</div>')
+    .nodeColor("color").nodeVal("val").nodeOpacity(.95).nodeResolution(12)
+    .linkColor(l=>l.dashed?"#3a3e50":"#6c8cff")
+    .linkWidth(l=>l.dashed?0.5:1.2).linkOpacity(.55)
+    .linkDirectionalParticles(l=>l.dashed?0:2).linkDirectionalParticleWidth(1.6)
+    .linkLabel(l=>l.rel?'关系：'+esc(l.rel):'')
+    .onNodeClick(n=>{const r=1.7;Graph.cameraPosition({x:(n.x||0)*r,y:(n.y||0)*r,z:(n.z||0)*r+40},n,800);});
+  if(Graph.d3Force("charge"))Graph.d3Force("charge").strength(-120);
+}
+function switchView(v){
+  const is3d=v==="3d";
+  $("#tab3d").classList.toggle("active",is3d);$("#tab2d").classList.toggle("active",!is3d);
+  $("#graph3d").style.display=is3d?"block":"none";$("#treeWrap").style.display=is3d?"none":"block";
+  if(is3d&&Graph){Graph.width($("#graph3d").clientWidth).height($("#graph3d").clientHeight);}
+}
+$("#tab3d").onclick=()=>switchView("3d");
+$("#tab2d").onclick=()=>switchView("2d");
+window.addEventListener("resize",()=>{if(Graph&&$("#graph3d").style.display!=="none")Graph.width($("#graph3d").clientWidth);});
+
+/* ===== STEP 4 · 判定 + 分享卡 ===== */
+const REL=[{id:1,nm:"复述/换皮",ic:"👕"},{id:2,nm:"应用/举例",ic:"🧩"},{id:3,nm:"精化",ic:"🔧"},{id:4,nm:"综合",ic:"🔗"},{id:5,nm:"新分支/反驳",ic:"🌱"}];
+const STAMP_COLOR={1:["#7d93b5",""],2:["#3ec8c2",""],3:["#f0a93b",""],4:["#b07bff","金"],5:["#3fd07a","金"]};
+$("#toVerdict").onclick=runVerdict;
+async function runVerdict(){
+  show(4);load(4,true);err(4);
+  try{
+    const v=await ask(PROMPTS.verdict,{structured_claim:{proposition:state.claim.proposition,assertion:state.claim.assertion,argument:state.claim.argument,scope:state.claim.scope},trace_result:state.trace});
+    state.verdict=v;renderVerdict(v);renderShare(v);load(4,false);
+  }catch(e){load(4,false);err(4,e.message);}
+}
+function renderVerdict(v){
+  $("#rel5").innerHTML=REL.map(r=>'<div class="rel'+(r.id===v.category_id?" hit":"")+'"><div class="ic">'+r.ic+'</div><div class="nm">'+r.nm+'</div></div>').join("");
+  $("#vstmt").textContent=v.verdict_statement||"";$("#vreason").textContent=v.reason||"";
+  $("#sproutBox").innerHTML=v.sprouted?
+    '<div class="sprout">🌱 <b>这一笔长出了新东西</b>　'+esc(v.sprout_reason||"")+'</div>':
+    '<div class="muted" style="margin-top:12px;font-size:13px">未长出新枝芽——它还在旧体系里。（这不丢人，多数想法都是。）</div>';
+  $("#rebut").textContent=v.rebuttal_prompt||"不同意这个判定？告诉我哪里不对";
+}
+let cardSize="34";
+function renderShare(v){
+  const [col,rare]=STAMP_COLOR[v.category_id]||["#7d93b5",""],golden=(rare==="金");
+  const t=state.trace,c=state.claim;
+  const lineOne=(t.lineage||[]).slice(0,3).map(n=>esc(n.content)).join(" ← ");
+  const msCount=(t.multi_source||[]).length,sq=cardSize==="11";
+  const stampStyle=golden?'background:rgba(0,0,0,.25);border:2px solid '+col+';box-shadow:0 0 24px '+col+'66':'background:'+col+'1a;border:1px solid '+col+'66';
+  $("#shareCard").className=sq?"square":"";
+  $("#shareCard").innerHTML=
+    '<div class="sc-brand">溯源 · 观点血缘报告</div>'+
+    '<div class="sc-stamp" style="'+stampStyle+'"><div class="lab" style="color:'+col+'">'+((v.category_id===5||v.category_id===4)?"🌱 ":"")+esc(v.category_name)+'</div>'+
+       '<div class="ph">"'+esc(v.stamp_phrase||"")+'"</div></div>'+
+    '<div class="sc-claim">"'+esc(c.proposition)+'"<span class="scope">适用：'+esc(c.scope)+'</span></div>'+
+    (sq?'<div class="sc-line">你 ← '+(t.lineage&&t.lineage[0]?esc(t.lineage[0].content):'')+'</div>'
+       :'<div class="sc-line">血缘：你 ← '+lineOne+'</div><div class="sc-multi">众源 · 另有 '+msCount+' 个阵营持类似观点</div>')+
+    '<div class="sc-foot"><div class="dis">血缘为假设非定论，置信度仅供参考。</div><div class="qr">扫码<br>自测</div></div>';
+}
+$("#sz34").onclick=()=>{cardSize="34";$("#sz34").classList.add("active");$("#sz11").classList.remove("active");if(state.verdict)renderShare(state.verdict);};
+$("#sz11").onclick=()=>{cardSize="11";$("#sz11").classList.add("active");$("#sz34").classList.remove("active");if(state.verdict)renderShare(state.verdict);};
+$("#copyCard").onclick=()=>{const v=state.verdict,c=state.claim,t=state.trace;
+  const txt="【溯源 · 观点血缘报告】\n判定："+v.category_name+"（"+(v.stamp_phrase||"")+"）\n观点：\""+c.proposition+"\"\n适用："+c.scope+
+    "\n血缘：你 ← "+(t.lineage||[]).slice(0,3).map(n=>n.content).join(" ← ")+"\n众源：另有 "+(t.multi_source||[]).length+" 个阵营持类似观点"+
+    (v.sprouted?"\n🌱 长出新枝芽："+v.sprout_reason:"")+"\n（血缘为假设非定论）";
+  (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast("卡片文案已复制"),()=>toast("复制失败，请手动选择"));};
+$("#restart").onclick=()=>{Object.assign(state,{original:"",history:[],round:0,claim:null,trace:null,verdict:null,escape:false});
+  $("#qa").innerHTML="";$("#input").value="";$("#input").placeholder="把你的看法砸进来…";$("#go").textContent="扔给我 →";show(1);};
+
+/* ===== init ===== */
+loadCfg();syncSettings();$("#provokeTxt").textContent=PROVOKES[0];
+if(!curKey())$("#settings").classList.add("open");
+</script>
+</body>
+</html>

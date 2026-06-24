@@ -1,26 +1,52 @@
 @import "tailwindcss";
 
+/* 思想罗盘 · ink 主题（固定深色，作为一台思考仪器而非 SaaS 看板） */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0d0e12;
+  --panel: #14161c;
+  --panel-2: #1a1d25;
+  --foreground: #e8e6df;
+  --muted: #9a978d;
+  --faint: #6b6960;
+  --line: #272a33;
+  --accent: #7fb685; /* 新枝芽的绿 */
+  --accent-dim: #3c5a40;
+  --gold: #c9a86a; /* 源头/古老的金 */
+  --danger: #c97f7f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-panel: var(--panel);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-gold: var(--gold);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #16181f 0%, var(--background) 60%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", sans-serif;
 }
+
+/* 给“想法/原话/判语”用衬线，带点思想史的重量 */
+.serif {
+  font-family: "Songti SC", "STSong", "Noto Serif SC", Georgia, "Times New Roman", serif;
+}
+
+/* 置信度圆点 */
+.dot { letter-spacing: 2px; }
+
+/* 血缘脊线节点淡入 */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: riseIn 0.45s ease both; }
+
+/* 细滚动条 */
+* { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }

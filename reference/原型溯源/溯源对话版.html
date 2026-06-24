@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>溯源 · 对话版</title>
+<script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4efe3;--bg2:#ebe2d1;--card:#fdfaf2;--card2:#f2ebdc;--line:#ddd1bc;
+    --ink:#2b2218;--ink2:#6c5f4c;--ink3:#9a8c75;
+    --warm:#b07d1c;--warm2:#c8472f;--cool:#c8472f;--teal:#4e7d5e;--violet:#a8371f;--green:#4e7d5e;--slate:#9a8c75;
+    --seal:#c8472f;--seal2:#a8371f;--jade:#4e7d5e;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",Roboto,"Microsoft YaHei",sans-serif;
+    --serif:"Fraunces",Georgia,"Songti SC",serif;
+    --serifcjk:"Songti SC","STSong","Songti TC",STKaiti,serif;
+    --radius:13px;--shadow:0 12px 38px rgba(120,90,50,.16);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",Roboto,"Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.65;}
+  body{display:flex;flex-direction:column;min-height:100vh;background:
+    radial-gradient(1000px 520px at 85% -10%,rgba(108,140,255,.10),transparent 60%),
+    radial-gradient(800px 460px at 0% 0%,rgba(63,208,122,.06),transparent 55%),var(--bg);}
+  button{font-family:inherit;cursor:pointer}
+  .muted{color:var(--ink3)}
+
+  header{position:sticky;top:0;z-index:30;backdrop-filter:blur(14px);background:rgba(13,14,20,.74);border-bottom:1px solid var(--line)}
+  .hbar{max-width:760px;margin:0 auto;padding:11px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.5px;font-size:18px}
+  .logo .dot{width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 30% 30%,var(--green),var(--teal));box-shadow:0 0 14px var(--teal)}
+  .logo small{font-weight:500;color:var(--ink3);font-size:12px;letter-spacing:0}
+  .hspace{flex:1}
+  .gear{background:var(--card2);border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:7px 12px;font-size:13px;display:flex;align-items:center;gap:6px}
+  .gear:hover{color:var(--ink);border-color:var(--ink3)}
+  .key-ok{color:var(--green)}.key-no{color:var(--warm2)}
+  .settings{display:none;border-top:1px solid var(--line);background:var(--bg2)}
+  .settings.open{display:block}
+  .settings .inner{max-width:760px;margin:0 auto;padding:16px 18px;display:grid;gap:12px;grid-template-columns:1fr 1fr;align-items:end}
+  .fld{display:flex;flex-direction:column;gap:5px}.fld.full{grid-column:1/-1}
+  .fld label{font-size:12px;color:var(--ink2);font-weight:600}.fld .hint{font-size:11px;color:var(--ink3)}
+  select,input{background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 11px;font-size:14px;width:100%;outline:none}
+  select:focus,input:focus{border-color:var(--cool)}
+  .row-btns{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .btn{border:none;border-radius:11px;padding:9px 15px;font-size:14px;font-weight:600}
+  .btn-primary{background:linear-gradient(135deg,var(--cool),var(--violet));color:#fff}
+  .btn-ghost{background:var(--card2);border:1px solid var(--line);color:var(--ink2)}.btn-ghost:hover{color:var(--ink)}
+
+  .chat{flex:1;max-width:760px;width:100%;margin:0 auto;padding:22px 18px 150px;display:flex;flex-direction:column;gap:14px}
+  .msg{display:flex;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .msg.me{justify-content:flex-end}
+  .bubble{max-width:88%;padding:13px 16px;border-radius:16px;font-size:15px}
+  .msg.ai .bubble{background:var(--card);border:1px solid var(--line);border-top-left-radius:5px}
+  .msg.me .bubble{background:linear-gradient(135deg,rgba(108,140,255,.22),rgba(176,123,255,.18));border:1px solid rgba(108,140,255,.35);border-top-right-radius:5px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .chip{background:var(--card2);border:1px solid var(--line);color:var(--ink2);border-radius:20px;padding:6px 13px;font-size:13px}
+  .chip:hover{color:var(--ink);border-color:var(--cool)}
+  .confirm{display:flex;gap:9px;margin-top:11px;flex-wrap:wrap}
+  .cbtn{border-radius:11px;padding:8px 14px;font-size:13.5px;font-weight:600;border:1px solid var(--line)}
+  .cbtn.yes{background:linear-gradient(135deg,var(--teal),var(--cool));color:#06231f;border:none}
+  .cbtn.no{background:var(--card2);color:var(--ink2)}
+  .para{font-size:15px}.para b{color:var(--teal)}
+
+  /* ---- report card ---- */
+  .report{width:100%;max-width:100%;background:linear-gradient(165deg,#1a1d2b,#101119);border:1px solid var(--line);
+    border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+  .frame{padding:18px 20px 6px;text-align:center}
+  .frame .bdg{font-size:23px;font-weight:800;letter-spacing:1px}
+  .frame.in .bdg{color:var(--slate)} .frame.out .bdg{color:var(--green)}
+  .frame .ft{font-size:13.5px;color:var(--ink2);margin-top:3px}
+  .relwrap{padding:8px 20px 4px;text-align:center}
+  .relbig{font-size:21px;font-weight:800}
+  .relsub{font-size:13.5px;color:var(--ink2);margin-top:3px}
+  .meter{margin:14px 20px 6px}
+  .track{position:relative;height:9px;border-radius:6px;overflow:hidden;
+    background:linear-gradient(90deg,#3a4a6a 0 40%,#5a6a8a 40% 65%,#6a7aa0 65% 85%,#7a8ac0 85%)}
+  .marker{position:absolute;top:-4px;width:17px;height:17px;border-radius:50%;background:#fff;border:3px solid var(--cool);transform:translateX(-50%);box-shadow:0 0 10px rgba(108,140,255,.7)}
+  .scalelab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink3);margin-top:6px}
+  .scorerow{display:flex;justify-content:flex-end;align-items:center;gap:6px;padding:2px 20px 0;font-size:12px;color:var(--ink3)}
+  .scorerow .ii{cursor:pointer;border:1px solid var(--line);border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px}
+  .reason{display:none;margin:6px 20px 0;font-size:12.5px;color:var(--ink2);background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+  .reason.show{display:block}
+
+  .origin{margin:12px 14px;border:1px solid rgba(176,123,255,.32);border-radius:15px;padding:14px 16px;background:radial-gradient(120% 120% at 50% 0%,rgba(176,123,255,.08),transparent)}
+  .origin .oh{font-size:12.5px;color:var(--ink2);margin-bottom:7px}
+  .origin .ohedge{color:var(--violet)}
+  .origin .obook{font-size:18px;font-weight:700;color:var(--ink);line-height:1.4}
+  .origin .obook .era{font-size:12px;color:var(--ink3);font-weight:400}
+  .origin .ofaint{font-size:14px;color:var(--ink2)}
+  .origin .root{padding:9px 0;border-top:1px dashed var(--line)}
+  .origin .root:first-of-type{border-top:none;padding-top:0}
+  .origin .root.top .rn{font-size:16px;font-weight:700;color:var(--ink)}
+  .origin .rn{font-size:14px;font-weight:600;color:var(--ink2)}
+  .origin .rw{font-size:12.5px;color:var(--ink3);margin-top:3px}
+  .origin .rd{margin-top:5px;font-size:12px}
+  .origin .ochain{font-size:12.5px;color:var(--ink3);margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+  .origin .odots{margin-top:8px}
+  .locatebtn{margin-top:11px;background:var(--card2);border:1px solid rgba(176,123,255,.45);color:var(--violet);border-radius:10px;padding:7px 12px;font-size:12.5px;font-weight:600}
+  .locatebtn:disabled{opacity:.5}
+  .locatebox{display:none;margin-top:10px;background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:11px 13px}
+  .locatebox.show{display:block}
+  .loc-sec{font-size:14.5px;font-weight:700;color:var(--ink);margin-bottom:6px}
+  .loc-line{font-size:13px;color:var(--ink2);margin-top:4px}.loc-line b{color:var(--ink)}
+  .loc-cav{font-size:12px;color:var(--warm);margin-top:7px}
+  .nextstep{font-size:12.5px;color:var(--ink2);background:rgba(245,166,35,.08);border-left:2px solid var(--warm);padding:7px 11px;border-radius:8px;margin-bottom:10px}
+  .tribe{margin:14px 14px;border:1px solid rgba(63,208,122,.28);border-radius:15px;padding:16px;background:radial-gradient(120% 120% at 50% 0%,rgba(63,208,122,.06),transparent)}
+  .tribe .th{font-size:15px;font-weight:700;text-align:center}
+  .tribe .tsub{font-size:12.5px;color:var(--ink3);text-align:center;margin:3px 0 12px}
+  .tribe .quote{font-family:Georgia,"Songti SC",serif;font-style:italic;font-size:16px;text-align:center;color:var(--ink);padding:6px 4px 12px}
+  .tribe .hint{font-size:12px;color:var(--teal);margin-bottom:6px}
+  .tribe-item{padding:9px 0;border-top:1px dashed var(--line)}
+  .tribe-item .p{font-size:14.5px;font-weight:600;display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .tribe-item .how{font-size:12.5px;color:var(--ink2);margin-top:2px}
+  .tribe-item .named{font-size:12px;color:var(--violet);margin-top:3px}
+  .dots{letter-spacing:1px;font-size:12px;flex-shrink:0}.dots .on{color:var(--teal)}.dots .off{color:var(--line)}
+  .blank{font-size:13px;color:var(--ink3);text-align:center;padding:8px}
+  .lineage{margin-top:10px}
+  .lineage summary{font-size:12.5px;color:var(--ink3);cursor:pointer}
+  .lineage .li{font-size:13px;color:var(--ink2);padding:5px 0 0}
+  .lineage .li .nm{color:var(--violet)}
+  .tribe .foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+  .tribe .foot .cf{font-size:11.5px;color:var(--ink3)}
+  .tribe .foot .wm{font-size:11px;color:var(--ink3);letter-spacing:1px}
+  .graphbtn{display:block;width:100%;margin-top:10px;background:var(--card2);border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:8px;font-size:12.5px}
+  #constellation{display:none;height:300px;margin-top:10px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:radial-gradient(circle at 50% 40%,#161826,#0b0c12)}
+  #constellation.show{display:block}
+
+  .grow{margin:6px 16px 12px;padding:14px;border:1px dashed rgba(245,166,35,.4);border-radius:14px;background:rgba(245,166,35,.04)}
+  .grow .gh{font-size:14px;font-weight:700;color:var(--warm);margin-bottom:10px}
+  .gchips{display:flex;gap:8px;flex-wrap:wrap}
+  .gchip{background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.4);color:var(--warm);border-radius:20px;padding:6px 13px;font-size:13px}
+  .gchip.active{background:var(--warm);color:#241300}
+  .gpanel{display:none;margin-top:11px;background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:12px}
+  .gpanel.show{display:block}
+  .gpanel .q{font-size:13px;color:var(--ink2)}
+  .gpanel .up{font-size:14.5px;font-weight:600;margin-top:8px;color:var(--ink)}
+  .gpanel .reagain{margin-top:11px;background:linear-gradient(135deg,var(--green),var(--teal));color:#06231f;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600}
+
+  .endrow{display:flex;gap:10px;padding:4px 16px 16px;flex-wrap:wrap}
+  .disc{font-size:11px;color:var(--ink3);padding:0 18px 14px}
+
+  .composer{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(0deg,var(--bg) 70%,transparent);padding:14px 18px calc(14px + env(safe-area-inset-bottom))}
+  .cinner{max-width:760px;margin:0 auto;display:flex;gap:10px;align-items:flex-end;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px 8px 8px 14px}
+  .cinner textarea{flex:1;background:none;border:none;color:var(--ink);font-size:15px;resize:none;outline:none;max-height:120px;padding:6px 0;font-family:inherit}
+  .send{flex-shrink:0;width:40px;height:40px;border-radius:11px;border:none;background:linear-gradient(135deg,var(--cool),var(--violet));color:#fff;font-size:17px}
+  .send:disabled{opacity:.45}
+
+  .spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--cool);border-radius:50%;animation:sp .8s linear infinite;display:inline-block;vertical-align:-3px;margin-right:8px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--card2);border:1px solid var(--line);color:var(--ink);padding:10px 16px;border-radius:11px;font-size:13px;transition:.3s;z-index:50;pointer-events:none;max-width:90%}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+  @media(max-width:560px){.settings .inner{grid-template-columns:1fr}.bubble{max-width:94%}}
+</style>
+<style>
+  /* ===== 宣纸夜 · 朱砂 — 视觉覆盖层（编辑/典籍感，去 AI 味）===== */
+  /* 纸面氛围 + 细颗粒噪点 */
+  body{background:
+    radial-gradient(920px 480px at 88% -8%, rgba(200,71,47,.07), transparent 60%),
+    radial-gradient(720px 460px at -6% 1%, rgba(78,125,94,.06), transparent 55%),
+    var(--bg);background-attachment:fixed;}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.04;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  header,.chat,.composer,.toast{position:relative;z-index:2}
+  header{background:rgba(248,243,233,.85)}
+  body::before{opacity:.05}
+
+  /* 字体：标题/数字/引文用衬线，正文保持无衬线 */
+  .logo{font-family:var(--serifcjk);font-weight:900;letter-spacing:2px;font-size:19px}
+  .logo small{font-family:var(--sans);letter-spacing:0}
+  .logo .dot{background:radial-gradient(circle at 32% 30%,#e85d40,var(--seal));box-shadow:0 0 14px rgba(200,71,47,.55)}
+  h2.title{font-family:var(--serifcjk);font-weight:900;letter-spacing:1px}
+  .key-ok{color:var(--jade)}
+
+  /* 按钮：去渐变，朱砂实色 */
+  .btn-primary,.send{background:var(--seal);color:#fff;box-shadow:none}
+  .btn-primary:hover,.send:hover{background:var(--seal2)}
+  .cbtn.yes{background:var(--seal);color:#fff;border:none}
+  .btn-warm{background:var(--warm);color:#241300}
+  .chip:hover{border-color:var(--seal);color:var(--ink)}
+
+  /* 气泡：去蓝紫，暖墨 */
+  .msg.me .bubble{background:#fbe9db;border:1px solid #f0cdb5;color:var(--ink);border-top-right-radius:5px}
+  .msg.ai .bubble{background:var(--card);border:1px solid var(--line)}
+  .bubble.q{border-left:3px solid var(--seal)}
+  .para{font-size:15px}
+  .para b{color:var(--seal);font-family:var(--serifcjk);font-weight:700}
+  .opp{background:rgba(200,71,47,.10);border-color:rgba(200,71,47,.4);color:var(--seal)}
+
+  /* ===== 报告卡：藏书票 / 典籍条目 ===== */
+  .report{background:linear-gradient(168deg,#fffdf6,#f5eee0);border:1px solid #e3d8c3;
+    box-shadow:0 14px 42px rgba(120,90,50,.16),inset 0 1px 0 rgba(255,255,255,.7)}
+  /* 跳框徽章 → 小标 kicker（让位给印章）*/
+  .frame{padding:20px 22px 2px}
+  .frame .bdg{font-size:13px;font-weight:700;letter-spacing:3px;font-family:var(--sans)}
+  .frame.out .bdg{color:var(--jade)} .frame.in .bdg{color:var(--ink3)}
+  .frame .ft{font-size:12.5px;color:var(--ink3);margin-top:4px;font-style:italic;font-family:var(--serif)}
+
+  /* 关系 → 朱砂印章（盖章动效）*/
+  .relwrap{margin:16px 0 10px}
+  .relbig{display:inline-block;font-family:var(--serifcjk);font-weight:900;line-height:1;
+    font-size:clamp(22px,6vw,30px);color:var(--seal);letter-spacing:5px;padding:14px 18px 12px 24px;
+    border:2.5px solid var(--seal);border-radius:6px;transform:rotate(-3.5deg);
+    box-shadow:inset 0 0 0 1.5px rgba(200,71,47,.35);background:rgba(200,71,47,.05);
+    animation:stamp .55s cubic-bezier(.2,1.45,.3,1) both}
+  @keyframes stamp{0%{transform:rotate(-3.5deg) scale(1.55);opacity:0}55%{opacity:1}100%{transform:rotate(-3.5deg) scale(1)}}
+  .relsub{font-family:var(--serif);font-style:italic;color:var(--ink2);font-size:14px;margin-top:13px}
+
+  /* 新意强度尺：暖色刻度 */
+  .track{background:linear-gradient(90deg,#e6dcc6 0 40%,#dcc79c 40% 65%,#d0a965 65% 85%,var(--seal) 85%)}
+  .marker{background:var(--seal);border-color:#fff;box-shadow:0 0 10px rgba(200,71,47,.7)}
+  .scorerow{font-family:var(--serif)}
+  .reason{font-family:var(--serif);font-style:italic;color:var(--ink2)}
+
+  /* 源头块：典籍 */
+  .origin{border-color:rgba(200,71,47,.3);background:radial-gradient(120% 120% at 50% 0%,rgba(200,71,47,.06),transparent)}
+  .origin .oh{font-family:var(--sans);letter-spacing:1px}
+  .origin .root.top .rn{font-family:var(--serifcjk);font-size:17px}
+  .origin .ohedge{color:var(--seal)}
+  .locatebtn{border-color:rgba(200,71,47,.45);color:var(--seal)}
+  .loc-sec{font-family:var(--serifcjk)}
+
+  /* 同类卡：朱砂 hairline + 大引文 */
+  .tribe{border-color:rgba(200,71,47,.26);background:radial-gradient(120% 120% at 50% 0%,rgba(200,71,47,.05),transparent)}
+  .tribe .th{font-family:var(--serifcjk);font-size:16px;font-weight:700}
+  .tribe .quote{font-family:var(--serif);font-style:italic;font-size:18px;color:var(--ink);
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:15px 6px;margin:8px 0 14px}
+  .tribe .hint{color:var(--seal)}
+  .dots .on{color:var(--seal)}
+  .tribe .foot .wm{font-family:var(--serif);font-style:italic}
+  .graphbtn:hover{border-color:var(--seal);color:var(--ink)}
+
+  /* 三招 grow：暖金 */
+  .grow{border-color:rgba(217,154,58,.42);background:rgba(217,154,58,.05)}
+  .gh{font-family:var(--serifcjk);color:var(--warm)}
+  .gchip{background:rgba(217,154,58,.12);border-color:rgba(217,154,58,.4);color:var(--warm)}
+  .gchip.active{background:var(--warm);color:#241300}
+  .gpanel .up{font-family:var(--serifcjk);font-weight:700;font-size:15px;color:var(--seal)}
+  .gpanel .walk{font-size:14px;color:var(--ink);line-height:1.78;margin-top:8px}
+  .gpanel .reagain{background:transparent;border:1px solid var(--line);color:var(--ink2);font-weight:500;font-size:12.5px;padding:7px 13px;border-radius:9px;margin-top:12px}
+  .gpanel .reagain:hover{border-color:var(--seal);color:var(--seal)}
+  .nextstep{border-left-color:var(--warm);background:rgba(217,154,58,.07)}
+
+  /* 步骤/输入区 */
+  .cinner:focus-within{border-color:var(--seal)}
+  textarea:focus,input:focus,select:focus{border-color:var(--seal)}
+  .vtab.active{border-color:var(--seal);background:rgba(200,71,47,.10)}
+</style>
+</head>
+<body>
+<header>
+  <div class="hbar">
+    <div class="logo"><span class="dot"></span>溯源<small>对话版</small></div>
+    <div class="hspace"></div>
+    <button class="gear" id="gearBtn">⚙︎ <span id="keyState" class="key-no">未设置 Key</span></button>
+  </div>
+  <div class="settings" id="settings">
+    <div class="inner">
+      <div class="fld"><label>模型服务商</label>
+        <select id="provider">
+          <option value="openai" selected>OpenAI（GPT，推荐）</option>
+          <option value="anthropic">Anthropic（Claude）</option>
+          <option value="minimax">MiniMax（实验性）</option>
+        </select><span class="hint" id="provHint"></span></div>
+      <div class="fld"><label>模型</label><input type="text" id="model" /><span class="hint" id="modelHint"></span></div>
+      <div class="fld full"><label>API Key（只存你本机浏览器，不上传第三方）</label><input type="password" id="apiKey" placeholder="粘贴你的 API Key…" autocomplete="off" /></div>
+      <div class="row-btns">
+        <button class="btn btn-primary" id="saveKey">保存</button>
+        <button class="btn btn-ghost" id="clearKey">清除 Key</button>
+        <span class="hint">推荐先用 gpt-4o：快、稳、便宜。</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="chat" id="chat"></div>
+
+<div class="composer">
+  <div class="cinner">
+    <textarea id="input" rows="1" placeholder="一两句就行，说人话…"></textarea>
+    <button class="send" id="send">↑</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ===== 两段提示词链（workflow 验证版；analyze 段已补 grow 防编造红线） ===== */
+const PROMPTS = {
+distill:`你是「溯源·对话版」的第一步处理器：秒回凝练。
+
+【你的唯一任务】
+读用户原话(original)和可选的一次追问历史(history)，做两件事之一：
+1) 把它凝练成一句清晰、可被打分的主张(proposition)；
+2) 仅当观点确实太模糊（缺主语 / 缺对照 / 缺范围，导致没法判断他到底主张什么）时，给出且仅给出一个澄清追问(question)。
+
+【凝练规则】
+- 用平视、人话的口吻，主语是「你想说的是…」，对事不对人。
+- 只抓主干、去情绪和铺垫，不替用户加他没说的立场，不发明要求。
+- 即使要追问，也先给一个尽力凝练的 proposition（基于现有信息的最佳理解），不要留空。
+- proposition 一句话，尽量是一个可判断真假/可被反驳的主张句，而非话题词。
+
+【是否追问的判定（克制，全程最多一次）】
+- 默认 need_followup=false，直接给凝练结果。
+- 只有当「这句话有两种以上差别很大的解读、且会导致完全不同的打分」时才 need_followup=true。
+- 追问要带方向、搭梯子，给用户二选一或具体补充点，不要泛泛的「能再具体点吗」。示例句式：「你是说所有 X，还是某种 X？」「这是在跟『{隐含对照}』比吗？」
+- 若 history 里已经追问过一次，则本轮一律 need_followup=false，直接凝练（最多只问一次）。
+
+【红线】
+- 不评判、不打分、不夸、不说教；这一步只确认「我听懂了」。
+- 不编造用户没表达的细节。
+
+【输出：严格 JSON，仅输出这个对象，不要任何额外文字、不要 markdown 代码块包裹】
+{ "need_followup": false, "question": "", "proposition": "一句话凝练后的主张" }
+
+字段约束：need_followup 为 true 时 question 非空、false 时 question 为 ""；proposition 非空、一句话。`,
+
+analyze:`你是「溯源·对话版」的第二步处理器：给一次观点表达做新意分析并帮用户认亲。打分对象永远是「这一次的观点表达 / 这个说法」，绝不是人。口吻平视、对事不对人、诚实优先于讨好。
+
+输入是第一步凝练好的主张 proposition（必要时可参考 original 原话用于裱进卡片）。你要一次性产出下面全部字段。
+
+【一、新意强度 novelty_score：0-100，给观点打分不是给人打分】
+按「这个说法相对它所在的旧框架/已有共识，做了什么动作」来定分：
+- 0-40 复述/换皮：同一个意思换种说法，没加新信息。
+- 40-65 精化/应用：在旧框架里加了边界、条件，或给了新例子/新应用场景。
+- 65-85 综合：把两个原本没被连起来的已有节点连上了。
+- 85-100 新分支/反驳：旧体系里没有这一条，或直接顶撞了一个旧节点。
+
+【二、分段 score_band（由分数唯一派生，必须自洽）】
+score<40 → "复述"；40<=score<65 → "精化/应用"；65<=score<85 → "综合"；85<=score → "新分支"。边界归属取上段。
+
+【三、broke_frame = (score>=65)】必须与 score 自洽。
+
+【四、frame_verdict：一句话「为什么是这个分」】
+模板：这个说法 + 做了什么动作 + 所以落在哪段。对事不对人，中性偏暖。
+
+【五、tribe 思想同类（横向认亲，2-4 个）】
+情绪目标是让用户觉得「原来我不是一个人这么想」，不是「你抄了别人」。
+- 每个同类用「画像命名」(persona)，例：「把约束当朋友的人」「把系统当生命体看的人」——比贴标签更动人。
+- how_they_say_it：这拨人通常会怎么说这件事，一句话。
+- confidence：0-1 单条置信度。named：具体人名/流派，仅当 confidence>=0.7 才允许有值，否则必须为空字符串 ""。
+
+【六、origin 最可能的源头（用户最想要：给出具体的源头，别甩空白）】
+找出这个想法最可能的几股思想源头，放进 roots 数组（1-4 个，按把握从高到低排）。每个 root：
+- name：具体的学派/传统/思想家/书。尽量给到具体名字，例「系统论 / Bertalanffy《General System Theory》」「杜威『从做中学』」「高德拉特 约束理论」「斯多葛 爱比克泰德」。别只说"多源合流"。
+- kind：书 / 先贤 / 学派 / 传统。
+- why：为什么它是源头（这想法的哪部分对应它），一句话。
+- confidence：0-1。hedge：假设语气词。
+分级红线（务必遵守）：
+- 点名「知名学派/传统/思想家」(系统论、杜威、斯多葛、福柯…) 门槛低：confidence>=0.45 即可给名字——这类编造风险低、本就是公认思想坐标。
+- 点名「确切书名+作者」门槛高：confidence>=0.7 才能写具体书名；没到就只给学派/思想家名，别硬安一本书。
+- 绝不编造人名/书名/年份；某一股实在没把握就不放进 roots。连大致思想坐标都找不到（极少见）才让 roots=[]。
+- 若这想法是「综合」(score>=65)，它本就来自多股汇流——更要把这几股**分别具名**列出来，而不是含糊说"多源"。
+另给 chain：由近及远的传播链（2-4 项）；overall_confidence：整体把握 0-1。
+
+【七、next_step（永远给）】
+一句大白话：「想再往前一点，关键就差……」，具体对着这条观点说，别绕、别端术语。
+（注："换个视角看"那三段展开由另一个独立步骤按需生成，这里不要给 grow。）
+
+【八、防幻觉红线（硬约束）】
+- tribe 与 origin：只能用假设语气（「可能来自」「线索指向」「这一脉，或可追溯到」「可能跟…共振」），严禁「出自」「引自」「你抄了」「来源是」。具体书名/人名只有 confidence>=0.7 才能填（书名是最容易编造的，没到 0.7 一律留空 ""）。没把握就标低置信度或留白，绝不编造人名/书名/年份。所有 tribe 的 confidence 都 <0.4 时 tribe 返回 []。
+- disclaimer：一句诚实声明，说明同类/血缘均为「假设+置信度」、可能不准。
+
+【输出：严格 JSON，仅输出这一个对象，不要任何额外文字、不要 markdown 代码块包裹】
+{
+  "novelty_score": 0, "score_band": "复述|精化/应用|综合|新分支", "broke_frame": false,
+  "frame_verdict": "一句话为什么是这个分", "quote": "用户原话精简版，用于裱进卡片",
+  "tribe": [ { "persona": "画像命名", "how_they_say_it": "这拨人会怎么说", "named": "", "confidence": 0.0 } ],
+  "origin": { "roots": [ { "name": "系统论 / Bertalanffy《General System Theory》", "kind": "学派/书", "why": "对应你想法的哪部分", "confidence": 0.0, "hedge": "线索指向" } ], "chain": [], "overall_confidence": 0.0 },
+  "next_step": "想再往前一点，关键就差……",
+  "disclaimer": "同类与血缘均为假设+置信度，可能不准，没把握处已留白。"
+}
+
+字段自洽：score_band 由 novelty_score 派生；broke_frame=(novelty_score>=65)；任何 named 非空者 confidence 必须>=0.7；next_step 必给；tribe 长度 2-4（全员<0.4 时为 []）；origin.roots 尽量具名（学派/思想家门槛 0.45、确切书名门槛 0.7），综合类必须把汇流的几股分别列出，绝不编造。`,
+
+locate:`你是「溯源」的"定位"处理器。给定一本书(book)、它的作者/先贤(who)、以及用户的主张(proposition)，指出这本书里**哪个概念 / 章节主题 / 核心论点**和用户的想法最对应，并说明怎么对应、又在哪偏离。口吻平视、对事不对人。
+
+红线（务必遵守）：
+- 只点到「概念 / 章节主题 / 核心论点」这个粒度，**绝不编造页码、绝不逐字虚构原文**。只有当某命题是这本书公认的核心、你有十足把握时，才可转述其大意（仍不标页码）。
+- 如果你对这本书的具体内容没有十足把握，就在 caveat 里老实说「这是基于这本书核心思想的推测，具体章节我没有十足把握」，并把 confidence 调低。
+- 不确定就用假设语气（大致对应 / 可能落在 / 这一脉）。
+
+输出：严格 JSON，仅输出这一个对象，不要 markdown 代码块：
+{ "section":"对应的概念/章节主题，如『开放系统与整体性』", "idea_there":"这本书那部分大致在讲什么", "how_it_maps":"你的想法和它怎么对应、又在哪偏离", "hedge":"假设语气词", "confidence":0.0, "caveat":"不确定处的诚实说明，没把握就直说" }
+
+输入：book / who / proposition。`,
+
+perspective:`你是「溯源」的"换个视角"作者，也是这个工具的灵魂。用户给了一个观点，你要带他**真正看见一个不同的视角**，让他心头一动。写不出"触动"就是失败。
+
+【这次写哪个方向】看 move：
+- 顶撞：把他想当然的一个前提反过来，让他看见自己一直默认、其实可疑的那个假设。
+- 换轴：让他挪到一个没坐过的位置/角色，从那儿看同一件事。
+- 嫁接：借另一个领域的眼睛（生态 / 游戏 / 医学 / 市场 / 手艺…挑最贴切的一个）来看他这件事。
+
+【硬性写作要求】
+① 第二人称「你」，全程代入他的真实处境，用他观点里的具体东西（别空谈）。
+② 6-9 句，像一个懂行的朋友坐你对面，把这个视角一层层揭开。
+③ 必须有一个真正的转折——不是换个说法，而是让他"啊，原来还能这么看"：揪出他当成理所当然、其实可疑的前提，或指出他站错了位置、用错了尺子。
+④ 用具体画面 / 小场景说话，别堆抽象名词、别端术语、别报论文。
+⑤ 收尾留一句能被记住、能戳一下人的话。
+⑥ 不说正确的废话、不写鸡汤。宁可尖锐，不要四平八稳。
+
+【风格与密度示范（只学语气和密度，绝不照抄内容）】
+"你现在站在裁判的位置上盯着他，想给他的观点验明正身。但你挪到他椅子上坐一下：深夜两点他在剪第七版，脑子里想的根本不是'提出一个人类没想过的思想'，而是'这条明天能不能爆'。把一个两百年前的旧观点翻译成一句让 23 岁打工人破防的话，这本身就是手艺，甚至比'原创'更稀缺。你一直拿'新不新'这把尺子量他，可他压根不在这条赛道上。真正改变世界的，常常不是第一个说的人，而是第一个让人听懂的人。"
+
+【输出：严格 JSON，仅这一个对象，不要 markdown 代码块】
+{ "one_liner": "这个视角的名字，≤14字，要勾人", "walk": "按上面全部要求写的一段，6-9句" }
+
+输入：move / proposition / original。`
+};
+
+/* ===== Provider 适配层（OpenAI 默认，已兼容新模型 max_completion_tokens） ===== */
+const PROVIDERS = {
+  openai:{label:"OpenAI",defaultModel:"gpt-4o",hint:"端点 api.openai.com/v1/chat/completions，Key 以 sk- 开头。",modelHint:"如 gpt-4o · gpt-4.1 · gpt-4o-mini",
+    async call(key,model,system,user){
+      const url="https://api.openai.com/v1/chat/completions",headers={"content-type":"application/json","Authorization":"Bearer "+key};
+      const base={model,messages:[{role:"system",content:system},{role:"user",content:user}]};
+      let r=await fetch(url,{method:"POST",headers,body:JSON.stringify(Object.assign({max_completion_tokens:4000},base))});
+      if(!r.ok){const t=await r.text();
+        if(/max_tokens|max_completion_tokens/i.test(t)){
+          r=await fetch(url,{method:"POST",headers,body:JSON.stringify(Object.assign({max_tokens:2200,temperature:0.2},base))});
+          if(!r.ok)throw new Error("OpenAI "+r.status+"："+(await r.text()).slice(0,300));
+        }else throw new Error("OpenAI "+r.status+"："+t.slice(0,300));}
+      const d=await r.json(),c=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+      if(!c)throw new Error("OpenAI 返回空内容（额度可能被推理过程吃光，换 gpt-4o 试试）。");return c;}},
+  anthropic:{label:"Anthropic",defaultModel:"claude-sonnet-4-6",hint:"端点 api.anthropic.com/v1/messages，浏览器直连。",modelHint:"如 claude-sonnet-4-6 · claude-opus-4-8",
+    async call(key,model,system,user){
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+        headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model,max_tokens:2200,system,messages:[{role:"user",content:user}]})});
+      if(!r.ok)throw new Error("Anthropic "+r.status+"："+(await r.text()).slice(0,300));
+      const d=await r.json();return d.content[0].text;}},
+  minimax:{label:"MiniMax",defaultModel:"MiniMax-Text-01",hint:"端点 api.minimax.chat（实验性）。",modelHint:"如 MiniMax-Text-01 · abab6.5s-chat",
+    async call(key,model,system,user){
+      const r=await fetch("https://api.minimax.chat/v1/text/chatcompletion_v2",{method:"POST",
+        headers:{"content-type":"application/json","Authorization":"Bearer "+key},
+        body:JSON.stringify({model,messages:[{role:"system",content:system},{role:"user",content:user}]})});
+      if(!r.ok)throw new Error("MiniMax "+r.status+"："+(await r.text()).slice(0,300));
+      const d=await r.json();return (d.choices&&d.choices[0]&&(d.choices[0].message?d.choices[0].message.content:d.choices[0].text))||d.reply||"";}}
+};
+function extractJSON(txt){
+  if(!txt)throw new Error("模型返回为空");
+  let s=String(txt).trim().replace(/^```(json)?/i,"").replace(/```$/,"").trim();
+  const a=s.indexOf("{"),b=s.lastIndexOf("}");if(a>=0&&b>a)s=s.slice(a,b+1);
+  try{return JSON.parse(s);}catch(e){throw new Error("解析模型 JSON 失败：\n"+String(txt).slice(0,200));}
+}
+function sysOf(p){const i=p.indexOf("\n【输出");return p;} // 整段作 system
+
+/* ===== 配置 ===== */
+const CFG_KEY="suyuan_cfg_v1";
+let cfg={provider:"openai",model:"gpt-4o",keys:{}};
+function loadCfg(){try{const c=JSON.parse(localStorage.getItem(CFG_KEY));if(c)cfg=Object.assign(cfg,c);}catch(e){}}
+function saveCfg(){try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg));}catch(e){}}
+function curKey(){return cfg.keys[cfg.provider]||"";}
+async function ask(promptText,inputObj){
+  const p=PROVIDERS[cfg.provider],key=curKey();
+  if(!key)throw new Error("还没设置 "+p.label+" 的 API Key —— 点右上角 ⚙︎ 填一下。");
+  const raw=await p.call(key,cfg.model||p.defaultModel,promptText,JSON.stringify(inputObj));
+  return extractJSON(raw);
+}
+
+/* ===== DOM ===== */
+const $=s=>document.querySelector(s);
+const chat=$("#chat");
+function esc(s){return (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function scrollEnd(){requestAnimationFrame(()=>window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"}));}
+function addMsg(role,html){const m=document.createElement("div");m.className="msg "+role;
+  m.innerHTML='<div class="bubble">'+html+'</div>';chat.appendChild(m);scrollEnd();return m;}
+function addNode(node){chat.appendChild(node);scrollEnd();return node;}
+let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),2200);}
+function dots(c){const n=Math.max(0,Math.min(5,Math.round((c||0)*5)));let s='<span class="dots">';for(let i=0;i<5;i++)s+=i<n?'<span class="on">●</span>':'<span class="off">○</span>';return s+'</span>';}
+
+/* ===== 设置 ===== */
+function syncSettings(){const p=PROVIDERS[cfg.provider];
+  $("#provider").value=cfg.provider;$("#model").value=cfg.model||p.defaultModel;$("#model").placeholder=p.defaultModel;
+  $("#apiKey").value=curKey();$("#provHint").textContent=p.hint;$("#modelHint").textContent=p.modelHint;
+  const ok=!!curKey();$("#keyState").textContent=ok?(p.label+" 已就绪"):("未设置 "+p.label+" Key");$("#keyState").className=ok?"key-ok":"key-no";}
+$("#gearBtn").onclick=()=>$("#settings").classList.toggle("open");
+$("#provider").onchange=e=>{cfg.provider=e.target.value;cfg.model=PROVIDERS[cfg.provider].defaultModel;saveCfg();syncSettings();};
+$("#saveKey").onclick=()=>{cfg.model=$("#model").value.trim()||PROVIDERS[cfg.provider].defaultModel;cfg.keys[cfg.provider]=$("#apiKey").value.trim();saveCfg();syncSettings();toast("已保存到本机浏览器");$("#settings").classList.remove("open");};
+$("#clearKey").onclick=()=>{delete cfg.keys[cfg.provider];$("#apiKey").value="";saveCfg();syncSettings();toast("已清除");};
+
+/* ===== 对话状态机 ===== */
+const OPENERS=["最近脑子里盘旋、又有点想跟人吵的那个想法，是啥？","说一句你觉得『大家没看明白』的事。","丢一个观点给我，越糙越好，我帮你看看它长在哪。"];
+const st={phase:"await_opinion",original:"",history:[],proposition:""};
+let busy=false;
+
+function opener(){
+  const o=OPENERS[Math.floor((Date.now()/9999)%OPENERS.length)]||OPENERS[0];
+  const m=addMsg("ai",esc(o)+'<div class="chips" id="egchips"><span class="chip" data-t="关于AI">#关于AI</span><span class="chip" data-t="关于工作">#关于工作</span><span class="chip" data-t="关于关系">#关于关系</span></div>');
+  m.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{$("#input").value="我对"+c.dataset.t.replace("关于","")+"的看法是：";$("#input").focus();});
+}
+function thinking(txt){return addMsg("ai",'<span class="spin"></span>'+esc(txt||"在想…"));}
+
+async function onSend(){
+  if(busy)return;const v=$("#input").value.trim();if(!v){toast("先写点东西");return;}
+  $("#input").value="";autoGrow();
+  if(st.phase==="await_confirm"){ // 用户在确认态又打字 = 等于"不太对，补一句"
+    st.phase="await_opinion";
+  }
+  if(st.phase==="await_opinion"){
+    st.original=v;st.history=[];addMsg("me",esc(v));runDistill();
+  }else if(st.phase==="await_followup"){
+    addMsg("me",esc(v));st.history.push({role:"user",answer:v});runDistill(v);
+  }
+}
+async function runDistill(extra){
+  busy=true;const t=thinking("我先抓抓主干…");
+  try{
+    const out=await ask(PROMPTS.distill,{original:st.original,history:st.history});
+    t.remove();
+    if(out.need_followup && out.question && !st._asked){
+      st._asked=true;st.phase="await_followup";st.history.push({role:"assistant",question:out.question});
+      addMsg("ai",esc(out.question));$("#input").placeholder="答这一句…";
+    }else{
+      st.proposition=out.proposition||st.original;showParaphrase();
+    }
+  }catch(e){t.remove();addMsg("ai","⚠ "+esc(e.message));}
+  busy=false;
+}
+function showParaphrase(){
+  st.phase="await_confirm";
+  const node=document.createElement("div");node.className="msg ai";
+  node.innerHTML='<div class="bubble"><div class="para">你想说的是：<b>'+esc(st.proposition)+'</b>。这样理解对吗？</div>'+
+    '<div class="confirm"><button class="cbtn yes" id="cyes">对，继续 →</button><button class="cbtn no" id="cno">不太对，我补一句</button></div></div>';
+  addNode(node);
+  node.querySelector("#cyes").onclick=()=>{node.querySelector(".confirm").remove();runAnalyze(st.proposition);};
+  node.querySelector("#cno").onclick=()=>{st.phase="await_opinion";st._asked=false;addMsg("ai","好，那你再说说——补一句或换个说法。");$("#input").focus();};
+}
+async function runAnalyze(prop){
+  busy=true;addMsg("ai","来了，给你拆一下 👇");const t=thinking("在查它的来历和同类…");
+  try{
+    const a=await ask(PROMPTS.analyze,{proposition:prop,original:st.original});
+    t.remove();renderReport(a);st.phase="await_opinion";st._asked=false;
+    $("#input").placeholder="想再聊一个观点？继续说…";
+  }catch(e){t.remove();addMsg("ai","⚠ "+esc(e.message));}
+  busy=false;
+}
+
+/* ===== 报告卡 ===== */
+const BAND={"复述":["复述 · 换皮","同一个意思，换了件衣服。能稳稳复述说明你真懂它——它流传得广，是有道理的。"],
+  "精化/应用":["精化 · 应用","你在旧框架里加了边界 / 条件 / 新例子，让它更结实、更好用了。"],
+  "综合":["综合","你把两个原本没连起来的点焊在了一起。这是真动作。"],
+  "新分支":["新分支 · 反驳","旧体系里没有这一条，或者你正面顶了它一下。"]};
+const TSUB={"复述":"这念头很多人想过——说明它够结实，你踩中了一个被反复验证的共识。",
+  "精化/应用":"你在一条老路上踩出了新脚印，同路人在这。",
+  "综合":"你把两根线接上了，接法和你像的人是这些。",
+  "新分支":"这想法还很新，同类可能正零散地散落在各处。"};
+
+function originBlock(o){
+  o=o||{};
+  const roots=(o.roots||[]).filter(r=>r&&r.name).slice().sort((a,b)=>(b.confidence||0)-(a.confidence||0));
+  const chain=(o.chain||[]).filter(Boolean);
+  let body="",bookForLocate="";
+  if(roots.length){
+    body=roots.map((r,i)=>'<div class="root'+(i===0?' top':'')+'"><div class="rn">'+(i===0?'最可能 · ':'还可能 · ')+esc(r.name)+'</div>'+
+      (r.why?'<div class="rw">'+esc(r.why)+'</div>':'')+
+      '<div class="rd"><span class="ohedge">'+esc(r.hedge||'线索指向')+'</span> '+dots(r.confidence)+'</div></div>').join("");
+    const bk=roots.find(r=>/《.+》/.test(r.name||"")||(r.kind&&r.kind.indexOf("书")>=0));
+    if(bk)bookForLocate=bk.name;
+  }else{
+    body='<div class="ofaint">这条线索很淡，我没找到清楚的源头——不硬安。'+(chain.length?'大致方向：'+chain.map(esc).join(' ← '):'')+'</div>';
+  }
+  const chainHtml=chain.length?'<div class="ochain">传播链：'+chain.map(esc).join(' &larr; ')+'</div>':'';
+  const locBtn=bookForLocate?'<button class="locatebtn" id="locateBtn" data-book="'+esc(bookForLocate).replace(/"/g,"")+'">📖 看它对应书里的哪一段 →</button><div class="locatebox" id="locateBox"></div>':'';
+  return '<div class="origin"><div class="oh">📖 这个想法最可能的源头</div>'+body+chainHtml+locBtn+'</div>';
+}
+
+function renderReport(a){
+  const band=a.score_band||"精化/应用";const [relbig,relsub]=BAND[band]||BAND["精化/应用"];
+  const broke=!!a.broke_frame;const score=Math.max(0,Math.min(100,a.novelty_score||0));
+  const tribe=(a.tribe||[]).filter(x=>x&&(x.confidence==null||x.confidence>=0.4));
+  const node=document.createElement("div");node.className="msg ai";
+  node.style.maxWidth="100%";
+  let tribeHtml;
+  if(tribe.length){
+    tribeHtml=tribe.map(x=>{
+      const named=(x.named&&(x.confidence==null||x.confidence>=0.7))?'<div class="named">这一脉，或可追溯到 '+esc(x.named)+'</div>':'';
+      return '<div class="tribe-item"><div class="p"><span>▸ '+esc(x.persona)+'</span>'+dots(x.confidence)+'</div>'+
+        (x.how_they_say_it?'<div class="how">'+esc(x.how_they_say_it)+'</div>':'')+named+'</div>';
+    }).join("");
+  }else tribeHtml='<div class="blank">这次线索太少，我先不瞎认亲——这道线索还很淡，先记着。</div>';
+
+  const originHtml=originBlock(a.origin);
+
+  const growHead=(band==="新分支")?"🌿 换个视角看看你这件事——挑一个："
+    :(broke?"🌿 想再往前？换个视角看看你这件事——挑一个：":"🌿 想跳出框架？换个视角看看你这件事——挑一个：");
+  const nextHtml=a.next_step?'<div class="nextstep">⤴ '+esc(a.next_step)+'</div>':'';
+  const DIRS=[["顶撞","🔄 反着想想"],["换轴","🧭 换个角度"],["嫁接","🌿 借隔壁领域"]];
+  const growHtml='<div class="grow"><div class="gh">'+growHead+'</div>'+nextHtml+'<div class="gchips">'+
+    DIRS.map(d=>'<button class="gchip" data-m="'+d[0]+'">'+d[1]+'</button>').join("")+
+    '</div><div class="gpanel" id="gp"></div></div>';
+
+  node.innerHTML='<div class="report">'+
+    '<div class="frame '+(broke?"out":"in")+'"><div class="bdg">'+(broke?"🌱 跳出来了":"🪴 还在框里")+'</div>'+
+      '<div class="ft">'+(broke?"这一下，长出了旧框架外的新枝。":"这次还在熟悉的框架内——稳，但没探头。想探头吗？")+'</div></div>'+
+    '<div class="relwrap"><div class="relbig">'+esc(relbig)+'</div><div class="relsub">'+esc(relsub)+'</div></div>'+
+    '<div class="meter"><div class="track"><div class="marker" style="left:'+score+'%"></div></div>'+
+      '<div class="scalelab"><span>复述</span><span>精化</span><span>综合</span><span>新分支</span></div></div>'+
+    '<div class="scorerow">新意强度 '+score+'<span class="ii" id="iibtn">为什么</span></div>'+
+    '<div class="reason show" id="reasonBox">'+esc(a.frame_verdict||"")+'</div>'+
+    originHtml+
+    '<div class="tribe"><div class="th">还有这些人，可能也这么想</div><div class="tsub">'+esc(TSUB[band]||"")+'</div>'+
+      '<div class="quote">❝ '+esc(a.quote||st.proposition)+' ❞</div>'+
+      '<div class="hint">线索指向 —</div>'+tribeHtml+
+      '<button class="graphbtn" id="gbtn">🌐 把你和同类连成一张图谱</button><div id="constellation"></div>'+
+      '<div class="foot"><span class="cf">同类/血缘均为假设</span><span class="wm">溯源 · sùyuán</span></div></div>'+
+    growHtml+
+    '<div class="disc">'+esc(a.disclaimer||"同类与血缘均为假设+置信度，可能不准。")+'</div>'+
+    '<div class="endrow"><button class="btn btn-ghost" id="copyBtn">复制这张卡</button></div>'+
+    '</div>';
+  addNode(node);
+
+  node.querySelector("#iibtn").onclick=()=>node.querySelector("#reasonBox").classList.toggle("show");
+  node.querySelector("#copyBtn").onclick=()=>copyCard(a,band);
+  const gb=node.querySelector("#gbtn");gb.onclick=()=>toggleGraph(node,a);
+  if(typeof ForceGraph3D==="undefined")gb.style.display="none";
+  const lb=node.querySelector("#locateBtn");
+  if(lb)lb.onclick=()=>runLocate({earliest_book:lb.dataset.book||"",earliest_who:""},lb,node.querySelector("#locateBox"));
+  {
+    const panel=node.querySelector("#gp");
+    node.querySelectorAll(".gchip").forEach(ch=>ch.onclick=()=>runPerspective(ch.dataset.m,node,ch,panel));
+  }
+}
+async function runLocate(o,btn,box){
+  if(box.dataset.done){box.classList.toggle("show");return;}
+  btn.disabled=true;box.classList.add("show");box.innerHTML='<span class="spin"></span>在翻这本书的对应处…';
+  try{
+    const r=await ask(PROMPTS.locate,{book:o.earliest_book,who:o.earliest_who,proposition:st.proposition});
+    box.dataset.done="1";
+    box.innerHTML='<div class="loc-sec">📑 '+esc(r.section||"")+(r.hedge?' <span class="ohedge">'+esc(r.hedge)+'</span>':'')+'</div>'+
+      (r.idea_there?'<div class="loc-line"><b>这部分在讲：</b>'+esc(r.idea_there)+'</div>':'')+
+      (r.how_it_maps?'<div class="loc-line"><b>对应你：</b>'+esc(r.how_it_maps)+'</div>':'')+
+      (r.caveat?'<div class="loc-cav">⚠ '+esc(r.caveat)+'</div>':'')+
+      '<div class="odots">'+dots(r.confidence)+'</div>';
+  }catch(e){box.dataset.done="";box.innerHTML='⚠ '+esc(e.message);}
+  btn.disabled=false;
+}
+async function runPerspective(move,node,ch,panel){
+  node.querySelectorAll(".gchip").forEach(c=>c.classList.remove("active"));ch.classList.add("active");
+  panel.className="gpanel show";panel.innerHTML='<span class="spin"></span>换个视角，慢慢讲给你听…';
+  try{
+    const g=await ask(PROMPTS.perspective,{move:move,proposition:st.proposition,original:st.original});
+    panel.innerHTML='<div class="up">'+esc(g.one_liner||"")+'</div><div class="walk">'+esc(g.walk||"")+'</div>'+
+      '<button class="reagain">把这个视角放进输入框 ✎</button>';
+    panel.querySelector(".reagain").onclick=()=>{$("#input").value=g.one_liner||"";autoGrow();$("#input").focus();toast("改成你自己的话，再发给我");};
+  }catch(e){panel.innerHTML='⚠ '+esc(e.message);}
+}
+let cGraph=null;
+function toggleGraph(node,a){
+  const el=node.querySelector("#constellation");
+  if(el.classList.contains("show")){el.classList.remove("show");return;}
+  el.classList.add("show");
+  if(typeof ForceGraph3D==="undefined"){el.innerHTML='<div style="padding:20px;color:var(--ink3);font-size:13px">3D 库未加载（需联网）。</div>';return;}
+  const nodes=[{id:"__you",name:"你："+(a.quote||st.proposition),color:"#d99a3a",val:12}];const links=[];
+  (a.tribe||[]).forEach((x,i)=>{nodes.push({id:"T"+i,name:x.persona+(x.how_they_say_it?"："+x.how_they_say_it:""),color:"#6fa384",val:6});links.push({source:"__you",target:"T"+i});});
+  ((a.origin&&a.origin.roots)||[]).forEach((r,i)=>{nodes.push({id:"L"+i,name:r.name,color:"#c8472f",val:6});links.push({source:"__you",target:"L"+i,dashed:true});});
+  cGraph=ForceGraph3D()(el).backgroundColor("rgba(0,0,0,0)").width(el.clientWidth).height(300)
+    .graphData({nodes,links})
+    .nodeLabel(n=>'<div style="background:#1b1d28;border:1px solid #2c2f3d;color:#eceef5;padding:6px 9px;border-radius:8px;font-size:12px;max-width:230px">'+esc(n.name)+'</div>')
+    .nodeColor("color").nodeVal("val").nodeOpacity(.95)
+    .linkColor(l=>l.dashed?"#5b4636":"#6fa384").linkOpacity(.5).linkWidth(1)
+    .linkDirectionalParticles(2).linkDirectionalParticleWidth(1.4);
+}
+function copyCard(a,band){
+  const tribe=(a.tribe||[]).filter(x=>x&&(x.confidence==null||x.confidence>=0.4));
+  const txt="【溯源 · 观点血缘报告】\n"+(a.broke_frame?"🌱 跳出旧框架了":"🪴 还在旧框架内")+" · "+(BAND[band]?BAND[band][0]:band)+" · 新意强度 "+(a.novelty_score||0)+
+    "\n\n❝ "+(a.quote||st.proposition)+" ❞\n\n跟你共振的一拨人：\n"+tribe.map(x=>"· "+x.persona+(x.how_they_say_it?"（"+x.how_they_say_it+"）":"")).join("\n")+
+    "\n\n（同类/血缘均为假设，可能不准）\n—— 溯源 sùyuán";
+  (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast("已复制"),()=>toast("复制失败，请手动选"));
+}
+
+/* ===== composer ===== */
+function autoGrow(){const t=$("#input");t.style.height="auto";t.style.height=Math.min(t.scrollHeight,120)+"px";}
+$("#input").addEventListener("input",autoGrow);
+$("#input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();onSend();}});
+$("#send").onclick=onSend;
+
+/* ===== init ===== */
+loadCfg();syncSettings();opener();
+if(!curKey())$("#settings").classList.add("open");
+</script>
+</body>
+</html>
