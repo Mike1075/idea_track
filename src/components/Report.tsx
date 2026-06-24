@@ -4,7 +4,7 @@ import { useState } from "react";
 import type {
   StructuredClaim,
   TraceResult,
-  VerdictResult,
+  AggregatedVerdict,
   CompassResult,
   FrontierGap,
   ExpandResult,
@@ -129,33 +129,70 @@ function LineageSpine({ t }: { t: TraceResult }) {
   );
 }
 
-/* ── 判定印章 ── */
-function VerdictStamp({ v }: { v: VerdictResult }) {
+/* ── 判定印章（多次采样投票 + 三档稳定度）── */
+const BAND_STYLE: Record<string, { color: string; dim: string; glyph: string }> = {
+  复述区: { color: "var(--muted)", dim: "rgba(154,151,141,0.10)", glyph: "↻" },
+  边界区: { color: "var(--gold)", dim: "rgba(201,168,106,0.10)", glyph: "⟡" },
+  新枝区: { color: "var(--accent)", dim: "rgba(127,182,133,0.10)", glyph: "🌱" },
+};
+
+function StabilityBar({ a }: { a: AggregatedVerdict }) {
+  // 每个采样一格，按是否长新枝着色
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex gap-1">
+        {a.samples.map((s, i) => (
+          <span
+            key={i}
+            title={`${s.category_id}·${s.category_name}`}
+            className="w-6 h-1.5 rounded-full"
+            style={{ background: s.sprouted ? "var(--accent)" : "var(--faint)" }}
+          />
+        ))}
+      </div>
+      <span className="text-[11px] text-[var(--faint)]">{a.stability}</span>
+    </div>
+  );
+}
+
+function VerdictStamp({ a }: { a: AggregatedVerdict }) {
+  const v = a.verdict;
+  const bs = BAND_STYLE[a.band] ?? BAND_STYLE["边界区"];
   return (
     <div
       className="rise rounded-xl border p-5"
       style={{
-        borderColor: v.sprouted ? "var(--accent-dim)" : "var(--line)",
-        background: v.sprouted
-          ? "linear-gradient(180deg, rgba(127,182,133,0.08), var(--panel))"
-          : "var(--panel)",
+        borderColor: a.band === "复述区" ? "var(--line)" : bs.color + "55",
+        background: `linear-gradient(180deg, ${bs.dim}, var(--panel))`,
       }}
     >
-      <SectionTitle k="verdict">判定 · 判关系不判人</SectionTitle>
+      <SectionTitle k="verdict">判定 · 判关系不判人 · 3 次投票</SectionTitle>
+
+      {/* 三档：复述区 / 边界区 / 新枝区 */}
       <div className="flex items-center gap-3 mb-3 flex-wrap">
-        <span className="text-xs px-2 py-1 rounded border border-[var(--line)] text-[var(--muted)]">
-          {v.category_id} · {v.category_name}
+        <span
+          className="text-sm px-3 py-1.5 rounded-full font-medium"
+          style={{ background: bs.dim, color: bs.color, border: `1px solid ${bs.color}55` }}
+        >
+          {bs.glyph} {a.band}
         </span>
-        {v.sprouted && (
-          <span className="text-xs px-2 py-1 rounded-full" style={{ background: "var(--accent-dim)", color: "var(--accent)" }}>
-            🌱 长出了新枝芽
-          </span>
-        )}
+        <span className="text-[11px] text-[var(--faint)]">
+          代表判定：{v.category_id}·{v.category_name}
+        </span>
       </div>
-      <div className="serif text-lg text-[var(--foreground)] leading-relaxed">「{v.stamp_phrase}」</div>
-      <div className="text-sm text-[var(--foreground)]/85 mt-2 leading-relaxed">{v.verdict_statement}</div>
-      <div className="text-[13px] text-[var(--muted)] mt-2 leading-relaxed">{v.reason}</div>
-      {v.sprouted && v.sprout_reason && (
+
+      <StabilityBar a={a} />
+
+      <div className="serif text-lg text-[var(--foreground)] leading-relaxed mt-4">
+        「{v.stamp_phrase}」
+      </div>
+      <div className="text-[13px] mt-2 leading-relaxed" style={{ color: bs.color }}>
+        {a.band_reason}
+      </div>
+      <div className="text-sm text-[var(--foreground)]/80 mt-2 leading-relaxed">
+        {v.verdict_statement}
+      </div>
+      {a.band === "新枝区" && v.sprout_reason && (
         <div className="text-[13px] mt-2 leading-relaxed" style={{ color: "var(--accent)" }}>
           新在哪：{v.sprout_reason}
         </div>
@@ -262,14 +299,14 @@ function Compass({
 export type FullReport = {
   claim: StructuredClaim;
   trace: TraceResult;
-  verdict: VerdictResult;
+  verdict: AggregatedVerdict;
   compass: CompassResult;
 };
 
 export default function Report({ r }: { r: FullReport }) {
   return (
     <div className="space-y-4">
-      <VerdictStamp v={r.verdict} />
+      <VerdictStamp a={r.verdict} />
       <Compass c={r.compass} claim={r.claim} lineage={r.trace.lineage} />
       <LineageSpine t={r.trace} />
       <ClaimCard c={r.claim} />

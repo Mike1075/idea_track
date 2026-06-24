@@ -63,6 +63,20 @@ export type VerdictResult = {
   rebuttal_prompt: string;
 };
 
+export type VerdictBand = "复述区" | "边界区" | "新枝区";
+
+// verdict 多次采样投票后的聚合结果
+export type AggregatedVerdict = {
+  verdict: VerdictResult; // 代表样本（众数类别里的一条）
+  band: VerdictBand;
+  band_reason: string;
+  sprouted: boolean; // 多数票是否长新枝
+  sprout_votes: number;
+  total: number;
+  stability: string; // 人话稳定度，如「3 次采样：2票·综合、1票·应用」
+  samples: { category_id: number; category_name: string; sprouted: boolean }[];
+};
+
 export type FrontierGap = {
   type: string;
   title: string;

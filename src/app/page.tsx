@@ -14,7 +14,7 @@ import Report, { type FullReport } from "@/components/Report";
 type Mode = "others" | "mine";
 type Phase = "idle" | "eliciting" | "analyzing" | "report" | "error";
 
-const STEPS = ["结构化", "溯源", "判定", "前沿罗盘"] as const;
+const STEPS = ["结构化", "溯源", "判定（3 次投票）", "前沿罗盘"] as const;
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>("others");
@@ -62,7 +62,7 @@ export default function Home() {
       setStepIdx(2);
       const verdict = await apiVerdict(claim, trace);
       setStepIdx(3);
-      const compass = await apiCompass(claim, trace, verdict);
+      const compass = await apiCompass(claim, trace, verdict.verdict);
       setReport({ claim, trace, verdict, compass });
       setPhase("report");
     } catch (e) {

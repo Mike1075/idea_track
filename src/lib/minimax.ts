@@ -31,7 +31,7 @@ function extractJson(raw: string): string {
   return s.slice(first, last + 1);
 }
 
-async function rawCall(messages: Msg[], maxTokens: number): Promise<string> {
+async function rawCall(messages: Msg[], maxTokens: number, temperature: number): Promise<string> {
   if (!KEY) throw new Error("缺少 MINIMAX_API_KEY 环境变量");
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST",
@@ -43,7 +43,7 @@ async function rawCall(messages: Msg[], maxTokens: number): Promise<string> {
       model: MODEL,
       messages,
       max_tokens: maxTokens,
-      temperature: 0.2,
+      temperature,
     }),
   });
   if (!res.ok) {
@@ -67,8 +67,9 @@ async function rawCall(messages: Msg[], maxTokens: number): Promise<string> {
 export async function askJson<T = unknown>(
   systemPrompt: string,
   input: unknown,
-  opts: { maxTokens?: number } = {}
+  opts: { maxTokens?: number; temperature?: number } = {}
 ): Promise<T> {
+  const temperature = opts.temperature ?? 0.2;
   const userContent =
     typeof input === "string" ? input : JSON.stringify(input, null, 2);
   const baseMessages: Msg[] = [
@@ -94,7 +95,7 @@ export async function askJson<T = unknown>(
   let lastErr: unknown;
   for (const a of attempts) {
     try {
-      const raw = await rawCall(a.messages, a.maxTokens);
+      const raw = await rawCall(a.messages, a.maxTokens, temperature);
       const json = extractJson(raw);
       return JSON.parse(json) as T;
     } catch (e) {

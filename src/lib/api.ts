@@ -4,6 +4,7 @@ import type {
   StructuredClaim,
   TraceResult,
   VerdictResult,
+  AggregatedVerdict,
   CompassResult,
   ExpandResult,
   FrontierGap,
@@ -47,7 +48,7 @@ export const apiTrace = (c: StructuredClaim) =>
 export const apiVerdict = (
   structured_claim: StructuredClaim,
   trace_result: TraceResult
-) => call<VerdictResult>("verdict", { structured_claim, trace_result });
+) => call<AggregatedVerdict>("verdict", { structured_claim, trace_result });
 
 export const apiCompass = (
   structured_claim: StructuredClaim,
