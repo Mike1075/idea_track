@@ -11,6 +11,7 @@ import type {
   LineageNode,
 } from "@/lib/types";
 import { apiExpand } from "@/lib/api";
+import { reportToMarkdown, downloadText } from "@/lib/export";
 
 function Dots({ n, tone = "muted" }: { n: number; tone?: "muted" | "accent" | "gold" }) {
   const v = Math.max(0, Math.min(5, Math.round(n)));
@@ -301,11 +302,48 @@ export type FullReport = {
   trace: TraceResult;
   verdict: AggregatedVerdict;
   compass: CompassResult;
+  original?: string;
 };
+
+function ExportBar({ r }: { r: FullReport }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(reportToMarkdown(r));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }
+  function download() {
+    const stamp = (r.original || r.verdict.verdict.stamp_phrase || "报告")
+      .replace(/\s+/g, "")
+      .slice(0, 16);
+    downloadText(`溯源-${stamp}.md`, reportToMarkdown(r));
+  }
+  return (
+    <div className="flex items-center gap-2.5">
+      <button
+        onClick={copy}
+        className="text-xs px-3 py-1.5 rounded-md border border-[var(--line)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--accent-dim)] transition"
+      >
+        {copied ? "✓ 已拷贝" : "⧉ 拷贝 Markdown"}
+      </button>
+      <button
+        onClick={download}
+        className="text-xs px-3 py-1.5 rounded-md border border-[var(--line)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--accent-dim)] transition"
+      >
+        ↓ 下载 .md
+      </button>
+    </div>
+  );
+}
 
 export default function Report({ r }: { r: FullReport }) {
   return (
     <div className="space-y-4">
+      <ExportBar r={r} />
       <VerdictStamp a={r.verdict} />
       <Compass c={r.compass} claim={r.claim} lineage={r.trace.lineage} />
       <LineageSpine t={r.trace} />

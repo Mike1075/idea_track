@@ -63,7 +63,7 @@ export default function Home() {
       const verdict = await apiVerdict(claim, trace);
       setStepIdx(3);
       const compass = await apiCompass(claim, trace, verdict.verdict);
-      setReport({ claim, trace, verdict, compass });
+      setReport({ claim, trace, verdict, compass, original: originalInput });
       setPhase("report");
     } catch (e) {
       fail(e);
