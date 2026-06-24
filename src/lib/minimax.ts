@@ -106,3 +106,43 @@ export async function askJson<T = unknown>(
     `MiniMax JSON 解析失败：${lastErr instanceof Error ? lastErr.message : String(lastErr)}`
   );
 }
+
+function stripThink(s: string): string {
+  const e = (s ?? "").lastIndexOf("</think>");
+  return e !== -1 ? s.slice(e + "</think>".length).trim() : (s ?? "").trim();
+}
+
+type VisionPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+/** M3 是多模态模型：传 data URL 图片 + 指令，返回纯文本（已剥离 <think>）。 */
+export async function askVisionText(
+  images: string[],
+  instruction: string,
+  opts: { maxTokens?: number } = {}
+): Promise<string> {
+  if (!KEY) throw new Error("缺少 MINIMAX_API_KEY 环境变量");
+  if (!images.length) throw new Error("没有图片");
+  const content: VisionPart[] = [
+    { type: "text", text: instruction },
+    ...images.map((url) => ({ type: "image_url", image_url: { url } }) as VisionPart),
+  ];
+  const res = await fetch(`${BASE}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${KEY}` },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: [{ role: "user", content }],
+      max_tokens: opts.maxTokens ?? 3000,
+      temperature: 0.1,
+    }),
+  });
+  if (!res.ok) throw new Error(`MiniMax 视觉 HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  const data = await res.json();
+  if (data?.base_resp?.status_code && data.base_resp.status_code !== 0)
+    throw new Error(`MiniMax 视觉错误 ${data.base_resp.status_code}: ${data.base_resp.status_msg}`);
+  const c = data?.choices?.[0]?.message?.content ?? "";
+  if (!c) throw new Error("MiniMax 视觉返回空内容");
+  return stripThink(c);
+}

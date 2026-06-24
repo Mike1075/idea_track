@@ -1,18 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   apiElicit,
   apiStructure,
   apiTrace,
   apiVerdict,
   apiCompass,
+  apiIngestImage,
+  apiIngestUrl,
+  getAccessCode,
+  setAccessCode,
+  UnauthorizedError,
 } from "@/lib/api";
 import type { ElicitResult } from "@/lib/types";
 import Report, { type FullReport } from "@/components/Report";
 
 type Mode = "others" | "mine";
 type Phase = "idle" | "eliciting" | "analyzing" | "report" | "error";
+
+function readFileAsDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
 
 const STEPS = ["结构化", "溯源", "判定（3 次投票）", "前沿罗盘"] as const;
 
@@ -33,6 +47,17 @@ export default function Home() {
   const [stepIdx, setStepIdx] = useState(0);
   const [report, setReport] = useState<FullReport | null>(null);
 
+  // 访问口令 + 输入采集
+  const [authed, setAuthed] = useState(true);
+  const [codeInput, setCodeInput] = useState("");
+  const [ingesting, setIngesting] = useState("");
+  const [ingestErr, setIngestErr] = useState("");
+  const [urlInput, setUrlInput] = useState("");
+
+  useEffect(() => {
+    setAuthed(!!getAccessCode());
+  }, []);
+
   function reset() {
     setPhase("idle");
     setInput("");
@@ -47,8 +72,48 @@ export default function Home() {
   }
 
   function fail(e: unknown) {
+    if (e instanceof UnauthorizedError) {
+      setAuthed(false);
+      setPhase("idle");
+      return;
+    }
     setError(e instanceof Error ? e.message : String(e));
     setPhase("error");
+  }
+
+  // 图片 → OCR → 填入输入框
+  async function ingestImages(files: FileList | null) {
+    if (!files || !files.length) return;
+    setIngestErr("");
+    setIngesting("正在识别图片…");
+    try {
+      const arr = await Promise.all(Array.from(files).slice(0, 6).map(readFileAsDataURL));
+      const { text } = await apiIngestImage(arr);
+      setInput((prev) => (prev ? prev + "\n\n" : "") + text);
+    } catch (e) {
+      if (e instanceof UnauthorizedError) return setAuthed(false);
+      setIngestErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIngesting("");
+    }
+  }
+
+  // URL → 正文/字幕 → 填入输入框
+  async function ingestFromUrl() {
+    const u = urlInput.trim();
+    if (!u) return;
+    setIngestErr("");
+    setIngesting("正在抓取链接…");
+    try {
+      const { text, title } = await apiIngestUrl(u);
+      setInput((prev) => (prev ? prev + "\n\n" : "") + (title ? `【${title}】\n` : "") + text);
+      setUrlInput("");
+    } catch (e) {
+      if (e instanceof UnauthorizedError) return setAuthed(false);
+      setIngestErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIngesting("");
+    }
   }
 
   // ── 跑后四段：结构化 → 溯源 → 判定 → 前沿罗盘 ──
@@ -122,6 +187,39 @@ export default function Home() {
     setPhase("eliciting");
   }
 
+  if (!authed) {
+    return (
+      <main className="mx-auto w-full max-w-md px-5 py-24">
+        <h1 className="serif text-2xl text-[var(--foreground)]">溯源 · 新意坐标仪</h1>
+        <p className="text-sm text-[var(--muted)] mt-2 mb-6">输入访问口令以继续。</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (codeInput.trim()) {
+              setAccessCode(codeInput.trim());
+              setAuthed(true);
+            }
+          }}
+          className="space-y-3"
+        >
+          <input
+            type="password"
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+            placeholder="访问口令"
+            className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-sm text-[var(--foreground)] focus:outline-none focus:border-[var(--accent-dim)]"
+          />
+          <button
+            type="submit"
+            className="w-full px-4 py-2 rounded-lg bg-[var(--accent-dim)] text-[var(--accent)] text-sm hover:brightness-125 transition"
+          >
+            进入
+          </button>
+        </form>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-10 sm:py-16">
       <header className="mb-8">
@@ -157,13 +255,50 @@ export default function Home() {
             ))}
           </div>
 
+          {/* 输入采集：图片识别 + URL 抓取 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-xs px-3 py-1.5 rounded-md border border-[var(--line)] text-[var(--muted)] hover:text-[var(--foreground)] hover:border-[var(--accent-dim)] transition cursor-pointer">
+              🖼 图片识别
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  ingestImages(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
+              <input
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && ingestFromUrl()}
+                placeholder="贴 YouTube / 公众号 / 网页链接…"
+                className="flex-1 rounded-md border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-xs text-[var(--foreground)] placeholder:text-[var(--faint)] focus:outline-none focus:border-[var(--accent-dim)]"
+              />
+              <button
+                onClick={ingestFromUrl}
+                className="text-xs px-3 py-1.5 rounded-md border border-[var(--line)] text-[var(--muted)] hover:text-[var(--foreground)] transition"
+              >
+                抓取
+              </button>
+            </div>
+          </div>
+          {(ingesting || ingestErr) && (
+            <div className={`text-[11px] ${ingestErr ? "text-[var(--danger)]" : "text-[var(--gold)]"}`}>
+              {ingesting ? <span className="animate-pulse">● {ingesting}</span> : ingestErr}
+            </div>
+          )}
+
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            rows={4}
+            rows={5}
             placeholder={
               mode === "others"
-                ? "粘一个观点 / 一句爆款里的核心说法，比如：情绪稳定是成年人最高级的能力"
+                ? "粘一个观点 / 一句爆款里的核心说法，或用上面的图片识别、链接抓取自动填入"
                 : "说一个你自己的观点，哪怕只是个念头——看看它到底新不新"
             }
             className="w-full rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-[15px] leading-relaxed serif text-[var(--foreground)] placeholder:text-[var(--faint)] placeholder:font-sans placeholder:text-sm focus:outline-none focus:border-[var(--accent-dim)] resize-none"

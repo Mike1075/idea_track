@@ -11,18 +11,39 @@ import type {
   LineageNode,
 } from "./types";
 
-async function call<T>(stage: string, body: unknown): Promise<T> {
-  const res = await fetch(`/api/${stage}`, {
+export const ACCESS_KEY = "siyuan_access_code";
+
+export function getAccessCode(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(ACCESS_KEY) || "";
+}
+export function setAccessCode(code: string) {
+  localStorage.setItem(ACCESS_KEY, code);
+}
+
+export class UnauthorizedError extends Error {}
+
+async function call<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`/api/${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-access-code": getAccessCode() },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 || data?.code === "UNAUTHORIZED") {
+    throw new UnauthorizedError(data?.error || "未授权");
+  }
   if (!res.ok || data?.ok === false) {
-    throw new Error(data?.error || `第「${stage}」步失败（HTTP ${res.status}）`);
+    throw new Error(data?.error || `「${path}」失败（HTTP ${res.status}）`);
   }
   return data.result as T;
 }
+
+// 输入采集
+export const apiIngestImage = (images: string[]) =>
+  call<{ text: string }>("ingest/image", { images });
+export const apiIngestUrl = (url: string) =>
+  call<{ text: string; source: string; title?: string }>("ingest/url", { url });
 
 export type ElicitInput = {
   original_input: string;
