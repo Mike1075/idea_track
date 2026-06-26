@@ -1,6 +1,6 @@
 # 溯源 · 新意坐标仪 — 设计文档
 
-> 日期：2026-06-24 · 状态：MVP 第一纵切已实现并部署
+> 日期：2026-06-24（进度更新 2026-06-25）· 状态：已上线 idea-track.vercel.app，详见文末「实现进度」
 
 ## 一句话
 
@@ -52,9 +52,23 @@
 
 `structure` 与 `trace` 对 MiniMax-M3 实跑通过：JSON 解析稳、血缘带假设语气词与置信度、防幻觉纪律守住（详见会话验证）。原型阶段另有 4 案例对抗式核查报告（3 复述 / 1 综合🌱，零编造），见 `reference/原型溯源/验证报告.md`。
 
-## 后续（v2 候选）
+## 实现进度（截至 2026-06-25）
 
+已上线 **idea-track.vercel.app**（Vercel 项目 `idea-track`，GitHub `Mike1075/idea_track`）。在 MVP 五段链基础上又做了：
+
+- **判定 = 3 次采样投票 + 三档稳定度**（复述区 / 边界区 / 新枝区）。起因：实测发现单次判定不稳——同一观点跨模型+同模型多次跑会判出 2/3/4/5（判定是最不稳的输出；血缘锚点与前沿缺口类型才是跨模型最稳的）。`src/lib/verdict.ts`，verdict 升温 0.7 跑 3 次，分歧本身作信号。
+- **导出**：报告一键拷贝 Markdown / 下载 .md（`src/lib/export.ts`）。
+- **访问口令闸门**（`src/proxy.ts`，`APP_ACCESS_CODE`，前端 `x-access-code` 头）：保护 /api 不被陌生人刷爆 MiniMax/网关额度。
+- **图片识别输入**：M3 本身多模态，直接 OCR 截图 → 观点文本（`/api/ingest/image`，无需额外 vision 模型）。
+- **URL 抓取**：公众号正文 / 通用网页可用；YouTube 字幕已被平台锁死（PoToken/attestation），仅尽力而为（`src/lib/fetchers.ts`）。
+- 环境变量：`MINIMAX_API_KEY` / `MINIMAX_BASE_URL`(api.minimaxi.com/v1) / `MINIMAX_MODEL`(MiniMax-M3) / `AI_GATEWAY_KEY`(Vercel AI Gateway，跨模型/待用) / `APP_ACCESS_CODE`。
+
+## 后续（按优先级）
+
+- **第二波（已选，最重）：实时检索核查** —— 接 web search 让溯源/判定能真去网上核查出处（呼应原型的对抗式 WebSearch），而非仅靠模型记忆。**开工前需定搜索源**：Tavily / Exa / Brave（有免费额度）或试 Gemini 网关自带 search grounding（免额外 key）。
+- 可靠的 **YouTube/Bilibili 字幕**：接专用转写 API 或自托管 yt-dlp worker（DIY 服务端抓取已不可行）。
+- **跨模型判定集成**：现为同模型×3，改 M3+Opus+Gemini 各一票更稳（需网关 key 进运行时）。
 - 「我的观点库」：Supabase(Postgres + pgvector) 持久化用户观点 + embedding，支持「你三个月前说过类似的 / 你以为新其实 X 说过」的回响与去重。
 - 3d-force-graph 把坐标 + 前沿画成可探索的小图。
-- YouTube/Bilibili 字幕采集适配器；进而把单观点升级批量跑在赛道上 = 老板要的空白雷达商业层。
-- 用原型验证报告的 4 案例做自动回归测试。
+- 把单观点升级批量跑在赛道上 = 老板要的空白雷达商业层。
+- 用原型验证报告的 4 案例做自动回归测试；基础防护之外再加限流。
